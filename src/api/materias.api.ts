@@ -145,50 +145,40 @@ export async function getMaterias(params?: {
 
     if (params?.search) {
       const q = params.search.toLowerCase();
-
-      data = data.filter(m =>
-        m.nombre.toLowerCase().includes(q)
-      );
+      data = data.filter(m => m.nombre.toLowerCase().includes(q));
     }
 
     if (params?.cursoId) {
-      data = data.filter(
-        m => m.cursoId === params.cursoId
-      );
+      data = data.filter(m => m.cursoId === params.cursoId);
     }
 
     return {
       data,
       total: data.length,
       page: 1,
-      limit: 20,
+      limit: data.length,
     };
   }
 
-  const response =
-    await apiRequest<BackendMateria[]>('/materias');
+  // Traer todas las materias sin paginación truncada
+  const response = await apiRequest<BackendMateria[]>('/materias?limit=100');
 
   let data = response.map(mapMateria);
 
   if (params?.search) {
     const q = params.search.toLowerCase();
-
-    data = data.filter(m =>
-      m.nombre.toLowerCase().includes(q)
-    );
+    data = data.filter(m => m.nombre.toLowerCase().includes(q));
   }
 
   if (params?.cursoId) {
-    data = data.filter(
-      m => m.cursoId === params.cursoId
-    );
+    data = data.filter(m => m.cursoId === params.cursoId);
   }
 
   return {
     data,
     total: data.length,
     page: 1,
-    limit: data.length || 20,
+    limit: data.length,
   };
 }
 

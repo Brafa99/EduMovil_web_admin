@@ -25,6 +25,11 @@ import { getMaterias } from '../../api/materias.api';
 import { useToast } from '../../hooks/useToast';
 import type { Materia } from '../../types';
 
+interface CatalogoItem {
+  id: string;
+  nombre: string;
+}
+
 const EMPTY = {
   nombre: '',
   descripcion: '',
@@ -38,6 +43,7 @@ export default function Temas() {
   
   const [refresh, setRefresh] = useState(0);
   const [materias, setMaterias] = useState<Materia[]>([]);
+  const [catalogos, setCatalogos] = useState<CatalogoItem[]>([]);
   const [loadingMaterias, setLoadingMaterias] = useState(false);
   const [selectedMateriaId, setSelectedMateriaId] = useState('');
 
@@ -53,42 +59,49 @@ export default function Temas() {
   const [confirmToggle, setConfirmToggle] = useState<Tema | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Tema | null>(null);
 
-  const [catalogosDisponibles, setCatalogosDisponibles] = useState<Array<{ id: string; nombre: string }>>([]);
-
-
-useEffect(() => {
-  async function cargarCatalogos() {
-    try {
-      const response = await apiRequest<Array<{ id: string; nombre: string }>>('/catalogo-materias');
-      setCatalogosDisponibles(response);
-    } catch (error) {
-      console.warn('Error cargando catálogos:', error);
-    }
-  }
-  cargarCatalogos();
-}, []);
-
+  // 1. Cargar materias y catálogos directamente del backend
   useEffect(() => {
-    const loadMaterias = async () => {
+    const loadData = async () => {
       setLoadingMaterias(true);
-
       try {
-        const response = await getMaterias();
-        const activas = response.data.filter(materia => materia.activo);
-        setMaterias(activas);
+        const matRes = await getMaterias();
+        const listaMaterias = matRes.data || [];
+        setMaterias(listaMaterias);
 
-        if (!selectedMateriaId && activas.length > 0) {
-          setSelectedMateriaId(activas[0].id);
+        if (!selectedMateriaId && listaMaterias.length > 0) {
+          setSelectedMateriaId(listaMaterias[0].id);
         }
+
+        // Intento 1: Obtener la lista completa de catálogos desde el endpoint del backend
+        try {
+          const catRes = await apiRequest<CatalogoItem[]>('/catalogo/materias');
+          if (Array.isArray(catRes) && catRes.length > 0) {
+            setCatalogos(catRes);
+            return;
+          }
+        } catch {
+          // Si el endpoint no existe, extraemos de las materias recibidas
+        }
+
+        // Intento 2: Construir catálogo a partir de las materias
+        const map = new Map<string, string>();
+        for (const m of listaMaterias) {
+          const id = m.catalogoMateriaId || m.catalogoMateria?.id;
+          if (id) {
+            map.set(id, m.catalogoMateria?.nombre || m.nombre);
+          }
+        }
+        setCatalogos(Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre })));
+
       } catch (error) {
-        console.error('Error cargando materias:', error);
+        console.error('Error cargando datos iniciales:', error);
         toast('No se pudieron cargar las materias', 'error');
       } finally {
         setLoadingMaterias(false);
       }
     };
 
-    loadMaterias();
+    loadData();
   }, [refresh, toast]);
 
   const selectedMateria = useMemo(
@@ -96,28 +109,43 @@ useEffect(() => {
     [materias, selectedMateriaId]
   );
 
-  const selectedCatalogoMateriaId = selectedMateria?.catalogoMateriaId;
+  // Identificar el ID de catálogo que le corresponde a la materia seleccionada
+  const activeCatalogoId = useMemo(() => {
+    if (!selectedMateria) return '';
+    if (selectedMateria.catalogoMateriaId) return selectedMateria.catalogoMateriaId;
+    if (selectedMateria.catalogoMateria?.id) return selectedMateria.catalogoMateria.id;
+
+    // Si la materia no trajo catalogoMateriaId explícito en el JSON, buscar coincidencia por nombre en catalogos
+    const nombreMat = selectedMateria.nombre.toLowerCase().trim();
+    const match = catalogos.find(c => {
+      const cNom = c.nombre.toLowerCase().trim();
+      return (
+        cNom === nombreMat ||
+        cNom.includes(nombreMat) ||
+        nombreMat.includes(cNom) ||
+        ((nombreMat.includes('bio') || nombreMat.includes('cien')) && (cNom.includes('bio') || cNom.includes('cien')))
+      );
+    });
+
+    return match ? match.id : catalogos[0]?.id || '';
+  }, [selectedMateria, catalogos]);
 
   const handleAdd = () => {
-  if (!selectedMateria) {
-    toast('Selecciona una materia primero', 'error');
-    return;
-  }
+    if (!selectedMateria) {
+      toast('Selecciona una materia primero', 'error');
+      return;
+    }
 
-  const existingCatalogoId =
-    selectedMateria.catalogoMateriaId || selectedMateria.catalogoMateria?.id;
+    setForm({
+      nombre: '',
+      descripcion: '',
+      orden: 1,
+      activo: true,
+      catalogoMateriaId: activeCatalogoId || catalogos[0]?.id || '',
+    });
 
-  setForm({
-    nombre: '',
-    descripcion: '',
-    orden: 1,
-    activo: true,
-    // Si la materia ya tiene catálogo lo usa; si no, toma el primero de la lista o queda vacío
-    catalogoMateriaId: existingCatalogoId || catalogosDisponibles[0]?.id || '',
-  });
-
-  setModal({ open: true, data: undefined });
-};
+    setModal({ open: true, data: undefined });
+  };
 
   const handleEdit = (tema: Tema) => {
     setForm({
@@ -141,7 +169,7 @@ useEffect(() => {
     }
 
     if (!form.catalogoMateriaId) {
-      toast('Debes seleccionar una materia con catálogo curricular', 'error');
+      toast('Debes seleccionar un catálogo curricular válido', 'error');
       return;
     }
 
@@ -218,19 +246,12 @@ useEffect(() => {
   };
 
   const fetchTemas = async () => {
-    const targetCatalogoId = selectedCatalogoMateriaId || selectedMateriaId;
-
-    if (!targetCatalogoId) {
-      return {
-        data: [],
-        total: 0,
-        page: 1,
-        limit: 20,
-      };
+    if (!activeCatalogoId) {
+      return { data: [], total: 0, page: 1, limit: 20 };
     }
 
     try {
-      const temas = await getTemas(targetCatalogoId);
+      const temas = await getTemas(activeCatalogoId);
       const list = Array.isArray(temas) ? temas : [];
       return {
         data: list,
@@ -249,47 +270,41 @@ useEffect(() => {
       <div className="space-y-4">
         <div className="card p-4">
           <div className="flex flex-col gap-3">
-  <div>
-    <div className="flex items-center gap-2">
-      <BookOpen size={18} />
-      <h2 className="font-semibold text-slate-700">
-        Materia / Catálogo curricular
-      </h2>
-    </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <BookOpen size={18} />
+                <h2 className="font-semibold text-slate-700">
+                  Materia / Catálogo curricular
+                </h2>
+              </div>
 
-    <p className="text-xs text-slate-400 mt-1">
-      Selecciona la materia para administrar sus temas o lecciones.
-    </p>
-  </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Selecciona la materia para administrar sus temas o lecciones.
+              </p>
+            </div>
 
-  {/* Selector principal SIEMPRE visible */}
-  <Select
-    value={selectedMateriaId}
-    onChange={e => {
-      setSelectedMateriaId(e.target.value);
-      setRefresh(r => r + 1);
-    }}
-    disabled={loadingMaterias}
-    placeholder={
-      loadingMaterias
-        ? 'Cargando materias...'
-        : 'Seleccionar materia'
-    }
-  >
-    {materias.map(materia => (
-      <option key={materia.id} value={materia.id}>
-        {materia.nombre}
-        {materia.curso?.nombre ? ` — ${materia.curso.nombre}` : ''}
-      </option>
-    ))}
-  </Select>
-
-  {selectedMateria && !selectedMateria.catalogoMateriaId && (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-      Esta materia no tenía catálogo vinculado; se le asignará automáticamente el catálogo correspondiente al crear el tema.
-    </div>
-  )}
-</div>
+            {/* Selector de materias con sus paralelos */}
+            <Select
+              value={selectedMateriaId}
+              onChange={e => {
+                setSelectedMateriaId(e.target.value);
+                setRefresh(r => r + 1);
+              }}
+              disabled={loadingMaterias}
+              placeholder={
+                loadingMaterias
+                  ? 'Cargando materias...'
+                  : 'Seleccionar materia'
+              }
+            >
+              {materias.map(materia => (
+                <option key={materia.id} value={materia.id}>
+                  {materia.nombre}
+                  {materia.curso?.nombre ? ` — ${materia.curso.nombre}` : ''}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
 
         <CrudPage<Tema>
@@ -420,8 +435,28 @@ useEffect(() => {
                   nombre: e.target.value,
                 }))
               }
-              placeholder="Fracciones equivalentes"
+              placeholder="Ej: La Célula y su Estructura"
             />
+          </FormField>
+
+          {/* Selector de Catálogo Curricular Asociado */}
+          <FormField label="Catálogo curricular asociado" required>
+            <Select
+              value={form.catalogoMateriaId}
+              onChange={e =>
+                setForm(f => ({
+                  ...f,
+                  catalogoMateriaId: e.target.value,
+                }))
+              }
+            >
+              <option value="">Selecciona el catálogo base...</option>
+              {catalogos.map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.nombre}
+                </option>
+              ))}
+            </Select>
           </FormField>
 
           <FormField label="Descripción">
