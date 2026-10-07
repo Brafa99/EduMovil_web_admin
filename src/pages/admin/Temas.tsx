@@ -104,41 +104,16 @@ useEffect(() => {
     return;
   }
 
-  // 1. Si la materia ya tiene su catálogo asignado, lo usamos
-  let realCatalogoId =
+  const existingCatalogoId =
     selectedMateria.catalogoMateriaId || selectedMateria.catalogoMateria?.id;
-
-  // 2. Si vino en null (ej. Ciencias Naturales), buscamos el catálogo que coincida por nombre
-  if (!realCatalogoId && catalogosDisponibles.length > 0) {
-    const nombreMat = selectedMateria.nombre.toLowerCase();
-    
-    // Coincidencia inteligente por nombre con los catálogos del sistema
-    const match = catalogosDisponibles.find(cat => {
-      const nombreCat = cat.nombre.toLowerCase();
-      if (nombreMat.includes('cien') || nombreMat.includes('bio')) {
-        return nombreCat.includes('cien') || nombreCat.includes('bio') || nombreCat.includes('natural');
-      }
-      if (nombreMat.includes('mat')) return nombreCat.includes('mat');
-      if (nombreMat.includes('leng') || nombreMat.includes('lit')) return nombreCat.includes('leng') || nombreCat.includes('comun');
-      if (nombreMat.includes('soc') || nombreMat.includes('hist')) return nombreCat.includes('soc') || nombreCat.includes('hist');
-      return false;
-    });
-
-    // Si encontró coincidencia usa ese ID; si no, toma el primer catálogo real disponible
-    realCatalogoId = match ? match.id : catalogosDisponibles[0]?.id;
-  }
-
-  if (!realCatalogoId) {
-    toast('No hay catálogos curriculares disponibles en el sistema', 'error');
-    return;
-  }
 
   setForm({
     nombre: '',
     descripcion: '',
     orden: 1,
     activo: true,
-    catalogoMateriaId: realCatalogoId, // 👈 Enviará siempre un UUID 100% válido y existente
+    // Si la materia ya tiene catálogo lo usa; si no, toma el primero de la lista o queda vacío
+    catalogoMateriaId: existingCatalogoId || catalogosDisponibles[0]?.id || '',
   });
 
   setModal({ open: true, data: undefined });
@@ -274,53 +249,47 @@ useEffect(() => {
       <div className="space-y-4">
         <div className="card p-4">
           <div className="flex flex-col gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <BookOpen size={18} />
-                <h2 className="font-semibold text-slate-700">
-                  Materia / Catálogo curricular
-                </h2>
-              </div>
+  <div>
+    <div className="flex items-center gap-2">
+      <BookOpen size={18} />
+      <h2 className="font-semibold text-slate-700">
+        Materia / Catálogo curricular
+      </h2>
+    </div>
 
-              <p className="text-xs text-slate-400 mt-1">
-                Selecciona la materia para administrar sus temas o lecciones.
-              </p>
-            </div>
-
-            
-  <div className="space-y-1">
-    <label className="text-xs font-semibold text-slate-600">
-      Catálogo curricular asociado*
-    </label>
-    <Select
-  value={selectedMateriaId}
-  onChange={e => {
-    setSelectedMateriaId(e.target.value);
-    setRefresh(r => r + 1);
-  }}
-  disabled={loadingMaterias}
-  placeholder={
-    loadingMaterias
-      ? 'Cargando materias...'
-      : 'Seleccionar materia'
-  }
->
-  {materias.map(materia => (
-    <option key={materia.id} value={materia.id}>
-      {materia.nombre}
-      {materia.curso?.nombre ? ` — ${materia.curso.nombre}` : ''}
-    </option>
-  ))}
-</Select>
+    <p className="text-xs text-slate-400 mt-1">
+      Selecciona la materia para administrar sus temas o lecciones.
+    </p>
   </div>
 
+  {/* Selector principal SIEMPRE visible */}
+  <Select
+    value={selectedMateriaId}
+    onChange={e => {
+      setSelectedMateriaId(e.target.value);
+      setRefresh(r => r + 1);
+    }}
+    disabled={loadingMaterias}
+    placeholder={
+      loadingMaterias
+        ? 'Cargando materias...'
+        : 'Seleccionar materia'
+    }
+  >
+    {materias.map(materia => (
+      <option key={materia.id} value={materia.id}>
+        {materia.nombre}
+        {materia.curso?.nombre ? ` — ${materia.curso.nombre}` : ''}
+      </option>
+    ))}
+  </Select>
 
-            {selectedMateria && !selectedMateria.catalogoMateriaId && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                Esta materia todavía no tiene un catálogo curricular asociado.
-              </div>
-            )}
-          </div>
+  {selectedMateria && !selectedMateria.catalogoMateriaId && (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+      Esta materia no tenía catálogo vinculado; se le asignará automáticamente el catálogo correspondiente al crear el tema.
+    </div>
+  )}
+</div>
         </div>
 
         <CrudPage<Tema>
