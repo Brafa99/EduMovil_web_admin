@@ -287,7 +287,7 @@ useEffect(() => {
               </p>
             </div>
 
-            {(!selectedMateria?.catalogoMateriaId || catalogosDisponibles.length > 0) && (
+            
   <div className="space-y-1">
     <label className="text-xs font-semibold text-slate-600">
       Catálogo curricular asociado*
@@ -313,7 +313,7 @@ useEffect(() => {
   ))}
 </Select>
   </div>
-)}
+
 
             {selectedMateria && !selectedMateria.catalogoMateriaId && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
