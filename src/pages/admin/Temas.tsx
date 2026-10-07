@@ -11,6 +11,7 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import { FormField, Input, Select } from '../../components/ui/FormField';
+import { apiRequest } from '../../api/client';
 
 import {
   getTemas,
@@ -34,7 +35,7 @@ const EMPTY = {
 
 export default function Temas() {
   const { toast } = useToast();
-
+  
   const [refresh, setRefresh] = useState(0);
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [loadingMaterias, setLoadingMaterias] = useState(false);
@@ -51,6 +52,37 @@ export default function Temas() {
   const [saving, setSaving] = useState(false);
   const [confirmToggle, setConfirmToggle] = useState<Tema | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Tema | null>(null);
+
+  const [catalogosDisponibles, setCatalogosDisponibles] = useState<Array<{ id: string; nombre: string }>>([]);
+
+useEffect(() => {
+  async function cargarCatalogos() {
+    try {
+      // Petición real al backend para obtener los catálogos curriculares globales
+      const response = await apiRequest<Array<{ id: string; nombre: string }>>('/catalogo-materias');
+      setCatalogosDisponibles(response);
+    } catch (error) {
+      console.warn('No se pudo cargar desde /catalogo-materias, extrayendo de materias cargadas:', error);
+      // Fallback dinámico con datos reales de las materias existentes
+      const extraidos = Array.from(
+        new Map(
+          materias
+            .filter(m => m.catalogoMateriaId)
+            .map(m => [
+              m.catalogoMateriaId,
+              {
+                id: m.catalogoMateriaId!,
+                nombre: m.catalogoMateria?.nombre || m.nombre,
+              },
+            ])
+        ).values()
+      );
+      setCatalogosDisponibles(extraidos);
+    }
+  }
+
+  cargarCatalogos();
+}, [materias]);
 
   useEffect(() => {
     const loadMaterias = async () => {
@@ -88,27 +120,19 @@ export default function Temas() {
     return;
   }
 
-  // Obtenemos el ID real del catálogo curricular
-  const realCatalogoId =
+  const existingCatalogoId =
     selectedMateria.catalogoMateriaId || selectedMateria.catalogoMateria?.id;
-
-  if (!realCatalogoId) {
-    toast(
-      'Esta materia no tiene catálogo curricular asignado. Vincúlala primero en Materias.',
-      'error'
-    );
-    return;
-  }
 
   setForm({
     nombre: '',
     descripcion: '',
-    orden: 1, // Valor inicial válido sin depender de una variable externa
+    orden: 1,
     activo: true,
-    catalogoMateriaId: realCatalogoId,
+    // Si la materia ya tiene catálogo lo usa; si no, toma el primero de la lista o queda vacío
+    catalogoMateriaId: existingCatalogoId || catalogosDisponibles[0]?.id || '',
   });
 
-  setModal({ open: true, data: undefined }); // 'undefined' en lugar de 'null'
+  setModal({ open: true, data: undefined });
 };
 
   const handleEdit = (tema: Tema) => {
@@ -254,26 +278,25 @@ export default function Temas() {
               </p>
             </div>
 
-            <Select
-              value={selectedMateriaId}
-              onChange={e => {
-                setSelectedMateriaId(e.target.value);
-                setRefresh(r => r + 1);
-              }}
-              disabled={loadingMaterias}
-              placeholder={
-                loadingMaterias
-                  ? 'Cargando materias...'
-                  : 'Seleccionar materia'
-              }
-            >
-              {materias.map(materia => (
-                <option key={materia.id} value={materia.id}>
-                  {materia.nombre}
-                  {materia.curso?.nombre ? ` — ${materia.curso.nombre}` : ''}
-                </option>
-              ))}
-            </Select>
+            {(!selectedMateria?.catalogoMateriaId || catalogosDisponibles.length > 0) && (
+  <div className="space-y-1">
+    <label className="text-xs font-semibold text-slate-600">
+      Catálogo curricular asociado*
+    </label>
+    <select
+      className="w-full rounded-lg border border-slate-200 p-2 text-sm bg-white"
+      value={form.catalogoMateriaId}
+      onChange={e => setForm(prev => ({ ...prev, catalogoMateriaId: e.target.value }))}
+    >
+      <option value="">Selecciona el catálogo curricular...</option>
+      {catalogosDisponibles.map(cat => (
+        <option key={cat.id} value={cat.id}>
+          {cat.nombre}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
 
             {selectedMateria && !selectedMateria.catalogoMateriaId && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
