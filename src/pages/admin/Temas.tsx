@@ -55,34 +55,18 @@ export default function Temas() {
 
   const [catalogosDisponibles, setCatalogosDisponibles] = useState<Array<{ id: string; nombre: string }>>([]);
 
+
 useEffect(() => {
   async function cargarCatalogos() {
     try {
-      // Petición real al backend para obtener los catálogos curriculares globales
       const response = await apiRequest<Array<{ id: string; nombre: string }>>('/catalogo-materias');
       setCatalogosDisponibles(response);
     } catch (error) {
-      console.warn('No se pudo cargar desde /catalogo-materias, extrayendo de materias cargadas:', error);
-      // Fallback dinámico con datos reales de las materias existentes
-      const extraidos = Array.from(
-        new Map(
-          materias
-            .filter(m => m.catalogoMateriaId)
-            .map(m => [
-              m.catalogoMateriaId,
-              {
-                id: m.catalogoMateriaId!,
-                nombre: m.catalogoMateria?.nombre || m.nombre,
-              },
-            ])
-        ).values()
-      );
-      setCatalogosDisponibles(extraidos);
+      console.warn('Error cargando catálogos:', error);
     }
   }
-
   cargarCatalogos();
-}, [materias]);
+}, []);
 
   useEffect(() => {
     const loadMaterias = async () => {
@@ -120,16 +104,41 @@ useEffect(() => {
     return;
   }
 
-  const existingCatalogoId =
+  // 1. Si la materia ya tiene su catálogo asignado, lo usamos
+  let realCatalogoId =
     selectedMateria.catalogoMateriaId || selectedMateria.catalogoMateria?.id;
+
+  // 2. Si vino en null (ej. Ciencias Naturales), buscamos el catálogo que coincida por nombre
+  if (!realCatalogoId && catalogosDisponibles.length > 0) {
+    const nombreMat = selectedMateria.nombre.toLowerCase();
+    
+    // Coincidencia inteligente por nombre con los catálogos del sistema
+    const match = catalogosDisponibles.find(cat => {
+      const nombreCat = cat.nombre.toLowerCase();
+      if (nombreMat.includes('cien') || nombreMat.includes('bio')) {
+        return nombreCat.includes('cien') || nombreCat.includes('bio') || nombreCat.includes('natural');
+      }
+      if (nombreMat.includes('mat')) return nombreCat.includes('mat');
+      if (nombreMat.includes('leng') || nombreMat.includes('lit')) return nombreCat.includes('leng') || nombreCat.includes('comun');
+      if (nombreMat.includes('soc') || nombreMat.includes('hist')) return nombreCat.includes('soc') || nombreCat.includes('hist');
+      return false;
+    });
+
+    // Si encontró coincidencia usa ese ID; si no, toma el primer catálogo real disponible
+    realCatalogoId = match ? match.id : catalogosDisponibles[0]?.id;
+  }
+
+  if (!realCatalogoId) {
+    toast('No hay catálogos curriculares disponibles en el sistema', 'error');
+    return;
+  }
 
   setForm({
     nombre: '',
     descripcion: '',
     orden: 1,
     activo: true,
-    // Si la materia ya tiene catálogo lo usa; si no, toma el primero de la lista o queda vacío
-    catalogoMateriaId: existingCatalogoId || catalogosDisponibles[0]?.id || '',
+    catalogoMateriaId: realCatalogoId, // 👈 Enviará siempre un UUID 100% válido y existente
   });
 
   setModal({ open: true, data: undefined });
@@ -283,18 +292,26 @@ useEffect(() => {
     <label className="text-xs font-semibold text-slate-600">
       Catálogo curricular asociado*
     </label>
-    <select
-      className="w-full rounded-lg border border-slate-200 p-2 text-sm bg-white"
-      value={form.catalogoMateriaId}
-      onChange={e => setForm(prev => ({ ...prev, catalogoMateriaId: e.target.value }))}
-    >
-      <option value="">Selecciona el catálogo curricular...</option>
-      {catalogosDisponibles.map(cat => (
-        <option key={cat.id} value={cat.id}>
-          {cat.nombre}
-        </option>
-      ))}
-    </select>
+    <Select
+  value={selectedMateriaId}
+  onChange={e => {
+    setSelectedMateriaId(e.target.value);
+    setRefresh(r => r + 1);
+  }}
+  disabled={loadingMaterias}
+  placeholder={
+    loadingMaterias
+      ? 'Cargando materias...'
+      : 'Seleccionar materia'
+  }
+>
+  {materias.map(materia => (
+    <option key={materia.id} value={materia.id}>
+      {materia.nombre}
+      {materia.curso?.nombre ? ` — ${materia.curso.nombre}` : ''}
+    </option>
+  ))}
+</Select>
   </div>
 )}
 
