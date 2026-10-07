@@ -83,22 +83,33 @@ export default function Temas() {
   const selectedCatalogoMateriaId = selectedMateria?.catalogoMateriaId;
 
   const handleAdd = () => {
-    const targetCatalogoId = selectedCatalogoMateriaId || selectedMateriaId;
+  if (!selectedMateria) {
+    toast('Selecciona una materia primero', 'error');
+    return;
+  }
 
-    if (!targetCatalogoId) {
-      toast('Por favor selecciona una materia primero', 'error');
-      return;
-    }
+  // Obtenemos el ID real del catálogo curricular
+  const realCatalogoId =
+    selectedMateria.catalogoMateriaId || selectedMateria.catalogoMateria?.id;
 
-    setForm({
-      ...EMPTY,
-      catalogoMateriaId: targetCatalogoId,
-    });
+  if (!realCatalogoId) {
+    toast(
+      'Esta materia no tiene catálogo curricular asignado. Vincúlala primero en Materias.',
+      'error'
+    );
+    return;
+  }
 
-    setModal({
-      open: true,
-    });
-  };
+  setForm({
+    nombre: '',
+    descripcion: '',
+    orden: 1, // Valor inicial válido sin depender de una variable externa
+    activo: true,
+    catalogoMateriaId: realCatalogoId,
+  });
+
+  setModal({ open: true, data: undefined }); // 'undefined' en lugar de 'null'
+};
 
   const handleEdit = (tema: Tema) => {
     setForm({
