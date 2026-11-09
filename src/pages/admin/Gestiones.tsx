@@ -424,32 +424,32 @@ export default function Gestiones() {
           setConfirmToggle(null)
         }
         onConfirm={async () => {
-          if (!confirmToggle) return;
+    if (!confirmToggle) return;
 
-          try {
-            await updateGestion(
-              confirmToggle.id,
-              {
-                activo:
-                  !confirmToggle.activo,
-              }
-            );
+    try {
+      await updateGestion(
+        confirmToggle.id,
+        {
+          // ⚠️ CAMBIO AQUÍ: Cambia 'activo' por 'activa'
+          activa: !confirmToggle.activo,
+        }
+      );
 
-            toast(
-              'Estado actualizado',
-              'success'
-            );
+      toast(
+        'Estado actualizado',
+        'success'
+      );
 
-            setRefresh(r => r + 1);
-          } catch {
-            toast(
-              'Error al actualizar el estado',
-              'error'
-            );
-          } finally {
-            setConfirmToggle(null);
-          }
-        }}
+      setRefresh(r => r + 1);
+    } catch {
+      toast(
+        'Error al actualizar el estado',
+        'error'
+      );
+    } finally {
+      setConfirmToggle(null);
+    }
+  }}
         title="Cambiar estado"
         message={`¿Confirmas ${
           confirmToggle?.activo

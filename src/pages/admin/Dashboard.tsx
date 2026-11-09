@@ -8,7 +8,7 @@ import {
   UserPlus,
   BarChart3,
   ArrowRight,
-  Activity,
+  // Activity,
   Layers3,
   Upload,
 } from 'lucide-react';
@@ -470,6 +470,8 @@ export default function AdminDashboard() {
    * Actividad reciente basada en
    * registros reales del sistema.
    */
+
+
   const recentActivity =
     useMemo<DashboardActivity[]>(
       () => {
@@ -980,13 +982,13 @@ export default function AdminDashboard() {
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Activity
+            {/* <Activity
               size={18}
               style={{
                 color:
                   'var(--color-blue)',
               }}
-            />
+            /> */}
 
             <div>
               <h3 className="section-title">
@@ -1013,7 +1015,7 @@ export default function AdminDashboard() {
           </Link>
         </div>
 
-        {recentActivity.length > 0 ? (
+        {/* {recentActivity.length > 0 ? (
           <div className="divide-y divide-slate-50">
             {recentActivity.map(
               item => (
@@ -1056,7 +1058,7 @@ export default function AdminDashboard() {
           <div className="py-10 text-center text-sm text-slate-400">
             No hay registros recientes.
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

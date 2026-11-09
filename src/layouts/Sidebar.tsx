@@ -3,7 +3,9 @@ import {
   LayoutDashboard, Building2, CalendarDays, BookOpen, Users,
   GraduationCap, UserCheck, FileText, ClipboardList, Upload,
   UserCog, BarChart3, Settings, ChevronLeft, ChevronRight,
-  X, Signal, MapPin, ClipboardCheck, User
+  X, Signal, MapPin, ClipboardCheck, User, Globe,
+  BookDashed,
+  BookAudio
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 
@@ -20,9 +22,11 @@ const ADMIN_NAV = [
   { label: 'Gestiones Académicas', icon: CalendarDays, to: '/admin/gestiones' },
   { label: 'Cursos y Paralelos', icon: BookOpen, to: '/admin/cursos' },
   { label: 'Profesores', icon: Users, to: '/admin/profesores' },
+  { label: 'Estudiantes', icon: GraduationCap, to: '/admin/estudiantes' },
   { label: 'Materias', icon: FileText, to: '/admin/materias' },
   { label: 'Temas/Lecciones', icon: BookOpen, to: '/admin/temas' },
-  { label: 'Estudiantes', icon: GraduationCap, to: '/admin/estudiantes' },
+  { label: 'Subtemas', icon: BookAudio, to: '/admin/subtemas' },
+  { label: 'Catálogo Base (IA)', icon: Globe, to: '/admin/catalogo' },
   { label: 'Padres y Tutores', icon: UserCheck, to: '/admin/padres' },
   { label: 'Notas', icon: ClipboardList, to: '/admin/notas' },
   { label: 'Prácticas', icon: ClipboardCheck, to: '/admin/practicas' },

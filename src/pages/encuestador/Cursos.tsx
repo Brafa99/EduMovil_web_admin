@@ -1,18 +1,18 @@
 import { useAuth } from '../../auth/AuthContext';
-import { CURSOS, GESTIONES } from '../../mocks/data';
+// import { CURSOS, GESTIONES } from '../../mocks/data';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { StatusBadge } from '../../components/ui/Badge';
 
 export default function EncuestadorCursos() {
   const { user } = useAuth();
-  const cursos = CURSOS.filter(c => c.unidadEducativaId === user?.unidadEducativaId);
+  // const cursos = CURSOS.filter(c => c.unidadEducativaId === user?.unidadEducativaId);
 
   return (
     <div className="space-y-6 max-w-4xl">
       <PageHeader title="Cursos y Paralelos" description="Cursos de tu institución asignada" />
       <div className="card p-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {cursos.map(c => {
+          {/* {cursos.map(c => {
             const gestion = GESTIONES.find(g => g.id === c.gestionId);
             return (
               <div key={c.id} className="border border-slate-100 rounded-xl p-4 hover:border-blue-200 hover:shadow-sm transition-all">
@@ -28,8 +28,8 @@ export default function EncuestadorCursos() {
                 </div>
               </div>
             );
-          })}
-          {cursos.length === 0 && <p className="text-sm text-slate-400 col-span-3">No hay cursos registrados.</p>}
+          })} */}
+          {/* {cursos.length === 0 && <p className="text-sm text-slate-400 col-span-3">No hay cursos registrados.</p>} */}
         </div>
       </div>
     </div>

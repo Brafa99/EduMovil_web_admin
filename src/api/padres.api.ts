@@ -1,6 +1,5 @@
 import type { Estudiante, Padre, PaginatedResponse } from '../types';
 import { apiRequest, IS_MOCK_MODE } from './client';
-import { PADRES } from '../mocks/data';
 
 interface BackendEstudianteRelacionado {
   estudianteId: string;
@@ -117,28 +116,7 @@ function mapPadre(padre: BackendPadre): Padre {
 export async function getPadres(
   params?: { search?: string }
 ): Promise<PaginatedResponse<Padre>> {
-  if (IS_MOCK_MODE) {
-    let data = [...PADRES];
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-
-      data = data.filter(
-        (p) =>
-          p.nombres.toLowerCase().includes(q) ||
-          p.apellidos.toLowerCase().includes(q) ||
-          p.ci.includes(q)
-      );
-    }
-
-    return {
-      data,
-      total: data.length,
-      page: 1,
-      limit: 20,
-    };
-  }
-
+  
   const response = await apiRequest<BackendPadre[]>('/padres');
 
   let data = response.map(mapPadre);
@@ -178,26 +156,6 @@ export interface CreatePadrePayload {
 export async function createPadre(
   data: CreatePadrePayload
 ): Promise<Padre> {
-  if (IS_MOCK_MODE) {
-    const now = new Date().toISOString();
-
-    const nuevo: Padre = {
-      id: `padre-${Date.now()}`,
-      ci: data.ci,
-      nombres: data.nombres,
-      apellidos: data.apellidos,
-      telefono: data.telefono ?? '',
-      email: data.email,
-      relacion: data.relacion,
-      activo: data.activo,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    PADRES.push(nuevo);
-
-    return nuevo;
-  }
 
  const payload = {
   ci: data.ci.trim(),
@@ -239,25 +197,7 @@ export async function updatePadre(
   id: string,
   data: UpdatePadrePayload
 ): Promise<Padre> {
-  if (IS_MOCK_MODE) {
-    const idx = PADRES.findIndex((p) => p.id === id);
-
-    if (idx === -1) {
-      throw {
-        statusCode: 404,
-        message: 'Padre/tutor no encontrado',
-      };
-    }
-
-    PADRES[idx] = {
-      ...PADRES[idx],
-      ...data,
-      relacion: data.relacion ?? PADRES[idx].relacion,
-      updatedAt: new Date().toISOString(),
-    };
-
-    return PADRES[idx];
-  }
+  
 
   const payload: Record<string, unknown> = {};
 

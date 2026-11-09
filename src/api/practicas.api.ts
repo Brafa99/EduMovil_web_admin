@@ -8,8 +8,6 @@ import {
   IS_MOCK_MODE,
 } from './client';
 
-import { PRACTICAS } from '../mocks/data';
-
 type TrimestreBackend = 'T1' | 'T2' | 'T3';
 type TrimestreFrontend = 1 | 2 | 3;
 
@@ -142,34 +140,7 @@ export async function getPracticas(
     estudianteId?: string;
   },
 ): Promise<PaginatedResponse<Practica>> {
-  if (IS_MOCK_MODE) {
-    let data = [...PRACTICAS];
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-
-      data = data.filter(
-        p =>
-          p.titulo.toLowerCase().includes(q) ||
-          p.estudiante?.nombres.toLowerCase().includes(q) ||
-          p.estudiante?.apellidos.toLowerCase().includes(q) ||
-          p.materia?.nombre.toLowerCase().includes(q),
-      );
-    }
-
-    if (params?.estudianteId) {
-      data = data.filter(
-        p => p.estudianteId === params.estudianteId,
-      );
-    }
-
-    return {
-      data,
-      total: data.length,
-      page: 1,
-      limit: 20,
-    };
-  }
+  
 
   const response = await apiRequest<BackendPractica[]>(
     '/practicas',
@@ -206,26 +177,6 @@ export async function getPracticas(
 export async function createPractica(
   data: CreatePracticaPayload,
 ): Promise<Practica> {
-  if (IS_MOCK_MODE) {
-    const now = new Date().toISOString();
-
-    const nuevo: Practica = {
-      id: `prac-${Date.now()}`,
-      titulo: data.titulo.trim(),
-      puntaje: Number(data.puntaje),
-      fecha: data.fecha ?? '',
-      estudianteId: data.estudianteId,
-      materiaId: data.materiaId,
-      trimestre: data.trimestre ?? 1,
-      descripcion: undefined,
-      estado: 'completado',
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    PRACTICAS.push(nuevo);
-    return nuevo;
-  }
 
   const payload = {
     titulo: data.titulo.trim(),
@@ -261,50 +212,7 @@ export async function updatePractica(
   id: string,
   data: Partial<CreatePracticaPayload>,
 ): Promise<Practica> {
-  if (IS_MOCK_MODE) {
-    const idx = PRACTICAS.findIndex(p => p.id === id);
-
-    if (idx === -1) {
-      throw {
-        statusCode: 404,
-        message: 'Práctica no encontrada',
-      };
-    }
-
-    const current = PRACTICAS[idx];
-
-    PRACTICAS[idx] = {
-      ...current,
-
-      ...(data.titulo !== undefined && {
-        titulo: data.titulo.trim(),
-      }),
-
-      ...(data.puntaje !== undefined && {
-        puntaje: Number(data.puntaje),
-      }),
-
-      ...(data.fecha !== undefined && {
-        fecha: data.fecha,
-      }),
-
-      ...(data.estudianteId !== undefined && {
-        estudianteId: data.estudianteId,
-      }),
-
-      ...(data.materiaId !== undefined && {
-        materiaId: data.materiaId,
-      }),
-
-      ...(data.trimestre !== undefined && {
-        trimestre: data.trimestre,
-      }),
-
-      updatedAt: new Date().toISOString(),
-    };
-
-    return PRACTICAS[idx];
-  }
+  
 
   const payload = {
     ...(data.titulo !== undefined && {

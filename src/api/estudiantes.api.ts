@@ -1,6 +1,6 @@
 import type { Estudiante, PaginatedResponse } from '../types';
 import { apiRequest, IS_MOCK_MODE } from './client';
-import { ESTUDIANTES } from '../mocks/data';
+// import { ESTUDIANTES } from '../mocks/data';
 
 interface BackendEstudiante {
   id: string;
@@ -82,41 +82,41 @@ export async function getEstudiantes(
     unidadEducativaId?: string;
   }
 ): Promise<PaginatedResponse<Estudiante>> {
-  if (IS_MOCK_MODE) {
-    let data = [...ESTUDIANTES];
+  // if (IS_MOCK_MODE) {
+  //   let data = [...ESTUDIANTES];
 
-    if (params?.search) {
-      const q = params.search.toLowerCase();
+  //   if (params?.search) {
+  //     const q = params.search.toLowerCase();
 
-      data = data.filter(
-        e =>
-          e.nombres.toLowerCase().includes(q) ||
-          e.apellidos.toLowerCase().includes(q) ||
-          e.ci.includes(q)
-      );
-    }
+  //     data = data.filter(
+  //       e =>
+  //         e.nombres.toLowerCase().includes(q) ||
+  //         e.apellidos.toLowerCase().includes(q) ||
+  //         e.ci.includes(q)
+  //     );
+  //   }
 
-    if (params?.cursoId) {
-      data = data.filter(
-        e => e.cursoActualId === params.cursoId
-      );
-    }
+  //   if (params?.cursoId) {
+  //     data = data.filter(
+  //       e => e.cursoActualId === params.cursoId
+  //     );
+  //   }
 
-    if (params?.unidadEducativaId) {
-      data = data.filter(
-        e =>
-          e.unidadEducativaId ===
-          params.unidadEducativaId
-      );
-    }
+  //   if (params?.unidadEducativaId) {
+  //     data = data.filter(
+  //       e =>
+  //         e.unidadEducativaId ===
+  //         params.unidadEducativaId
+  //     );
+  //   }
 
-    return {
-      data,
-      total: data.length,
-      page: 1,
-      limit: 20,
-    };
-  }
+  //   return {
+  //     data,
+  //     total: data.length,
+  //     page: 1,
+  //     limit: 20,
+  //   };
+  // }
 
   const response =
   await apiRequest<BackendEstudiante[]>(
@@ -193,29 +193,6 @@ function generarCodigoRude(): string {
 export async function createEstudiante(
   data: CreateEstudiantePayload
 ): Promise<Estudiante> {
-  if (IS_MOCK_MODE) {
-    const nuevo: Estudiante = {
-      id: `est-${Date.now()}`,
-      ci: data.ci,
-      nombres: data.nombres,
-      apellidos: data.apellidos,
-      codigoRude: data.codigoRude?.trim() || generarCodigoRude(),
-      fechaNacimiento:
-        data.fechaNacimiento ?? '',
-      genero: data.genero,
-      cursoActualId:
-        data.cursoActualId,
-      unidadEducativaId: data.unidadEducativaId,
-      gestionId: '',
-      activo: data.activo,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    ESTUDIANTES.push(nuevo);
-
-    return nuevo;
-  }
 
 const payload = {
   ci: data.ci,
@@ -259,26 +236,26 @@ export async function updateEstudiante(
     madreci?: string;
   }
 ): Promise<Estudiante> {
-  if (IS_MOCK_MODE) {
-    const idx = ESTUDIANTES.findIndex(
-      e => e.id === id
-    );
+  // if (IS_MOCK_MODE) {
+  //   const idx = ESTUDIANTES.findIndex(
+  //     e => e.id === id
+  //   );
 
-    if (idx === -1) {
-      throw {
-        statusCode: 404,
-        message: 'Estudiante no encontrado',
-      };
-    }
+  //   if (idx === -1) {
+  //     throw {
+  //       statusCode: 404,
+  //       message: 'Estudiante no encontrado',
+  //     };
+  //   }
 
-    ESTUDIANTES[idx] = {
-      ...ESTUDIANTES[idx],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
+  //   ESTUDIANTES[idx] = {
+  //     ...ESTUDIANTES[idx],
+  //     ...data,
+  //     updatedAt: new Date().toISOString(),
+  //   };
 
-    return ESTUDIANTES[idx];
-  }
+  //   return ESTUDIANTES[idx];
+  // }
 
   const payload: Record<string, unknown> = {};
 

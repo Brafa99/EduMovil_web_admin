@@ -5,7 +5,6 @@ import type {
   PaginatedResponse,
 } from '../types';
 import { apiRequest, IS_MOCK_MODE } from './client';
-import { NOTAS } from '../mocks/data';
 
 type BackendTrimestre = 'T1' | 'T2' | 'T3';
 
@@ -171,28 +170,7 @@ export async function getNotas(params?: {
   cursoId?: string;
   unidadEducativaId?: string;
 }): Promise<PaginatedResponse<Nota>> {
-  if (IS_MOCK_MODE) {
-    let data = [...NOTAS];
-
-    if (params?.estudianteId) {
-      data = data.filter(
-        nota => nota.estudianteId === params.estudianteId,
-      );
-    }
-
-    if (params?.materiaId) {
-      data = data.filter(
-        nota => nota.materiaId === params.materiaId,
-      );
-    }
-
-    return {
-      data,
-      total: data.length,
-      page: 1,
-      limit: data.length || 20,
-    };
-  }
+  
 
   const searchParams = new URLSearchParams();
 
@@ -234,18 +212,7 @@ export async function getNotas(params?: {
 }
 
 export async function getNota(id: string): Promise<Nota> {
-  if (IS_MOCK_MODE) {
-    const nota = NOTAS.find(item => item.id === id);
-
-    if (!nota) {
-      throw {
-        statusCode: 404,
-        message: 'Nota no encontrada',
-      };
-    }
-
-    return nota;
-  }
+  
 
   const response = await apiRequest<BackendNota>(
     `/notas/${id}`,
@@ -257,34 +224,7 @@ export async function getNota(id: string): Promise<Nota> {
 export async function createNota(
   data: CreateNotaPayload,
 ): Promise<Nota> {
-  if (IS_MOCK_MODE) {
-    const now = new Date().toISOString();
 
-    const nota: Nota = {
-      id: `nota-${Date.now()}`,
-      estudianteId: data.estudianteId,
-      materiaId: data.materiaId,
-      gestionId: '',
-      trimestre:
-        data.trimestre === 'T2'
-          ? 2
-          : data.trimestre === 'T3'
-            ? 3
-            : 1,
-      puntaje: data.notaNumeral,
-      estado:
-        data.notaNumeral >= 51
-          ? 'aprobado'
-          : 'reprobado',
-      observacion: data.observaciones ?? undefined,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    NOTAS.push(nota);
-
-    return nota;
-  }
 
   const response = await apiRequest<BackendNota>(
     '/notas',
@@ -309,53 +249,7 @@ export async function updateNota(
   id: string,
   data: UpdateNotaPayload,
 ): Promise<Nota> {
-  if (IS_MOCK_MODE) {
-    const index = NOTAS.findIndex(
-      nota => nota.id === id,
-    );
-
-    if (index === -1) {
-      throw {
-        statusCode: 404,
-        message: 'Nota no encontrada',
-      };
-    }
-
-    const actual = NOTAS[index];
-
-    const updated: Nota = {
-      ...actual,
-      estudianteId:
-        data.estudianteId ?? actual.estudianteId,
-      materiaId:
-        data.materiaId ?? actual.materiaId,
-      trimestre:
-        data.trimestre === 'T2'
-          ? 2
-          : data.trimestre === 'T3'
-            ? 3
-            : data.trimestre === 'T1'
-              ? 1
-              : actual.trimestre,
-      puntaje:
-        data.notaNumeral ?? actual.puntaje,
-      estado:
-        data.notaNumeral !== undefined
-          ? data.notaNumeral >= 51
-            ? 'aprobado'
-            : 'reprobado'
-          : actual.estado,
-      observacion:
-        data.observaciones !== undefined
-          ? data.observaciones ?? undefined
-          : actual.observacion,
-      updatedAt: new Date().toISOString(),
-    };
-
-    NOTAS[index] = updated;
-
-    return updated;
-  }
+  
 
   const response = await apiRequest<BackendNota>(
     `/notas/${id}`,
@@ -371,22 +265,7 @@ export async function updateNota(
 export async function deleteNota(
   id: string,
 ): Promise<void> {
-  if (IS_MOCK_MODE) {
-    const index = NOTAS.findIndex(
-      nota => nota.id === id,
-    );
-
-    if (index === -1) {
-      throw {
-        statusCode: 404,
-        message: 'Nota no encontrada',
-      };
-    }
-
-    NOTAS.splice(index, 1);
-    return;
-  }
-
+ 
   await apiRequest<void>(
     `/notas/${id}`,
     {

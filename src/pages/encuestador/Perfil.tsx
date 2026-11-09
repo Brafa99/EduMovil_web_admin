@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { User, Mail, Shield, Building2, Key } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
-import { INSTITUCIONES } from '../../mocks/data';
+// import { INSTITUCIONES } from '../../mocks/data';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { FormField, Input } from '../../components/ui/FormField';
 import { useToast } from '../../hooks/useToast';
@@ -10,7 +10,7 @@ export default function EncuestadorPerfil() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [passwordForm, setPasswordForm] = useState({ current: '', newPass: '', confirm: '' });
-  const institucion = INSTITUCIONES.find(i => i.id === user?.unidadEducativaId);
+  // const institucion = INSTITUCIONES.find(i => i.id === user?.unidadEducativaId);
 
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +46,7 @@ export default function EncuestadorPerfil() {
             { icon: <User size={16} />, label: 'Código de acceso', value: user?.codigo ?? '—' },
             { icon: <Shield size={16} />, label: 'Rol', value: user?.rol ?? '—' },
             { icon: <Mail size={16} />, label: 'Email', value: user?.email ?? '—' },
-            { icon: <Building2 size={16} />, label: 'Institución asignada', value: institucion?.nombre ?? 'Sin institución asignada' },
+            // { icon: <Building2 size={16} />, label: 'Institución asignada', value: institucion?.nombre ?? 'Sin institución asignada' },
           ].map(item => (
             <div key={item.label} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-500 bg-blue-50 shrink-0">{item.icon}</div>

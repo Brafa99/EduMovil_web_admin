@@ -2,7 +2,7 @@ import { GraduationCap, ClipboardList, CheckCircle2, Upload, AlertCircle, Plus, 
 import { Link } from 'react-router';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { useAuth } from '../../auth/AuthContext';
-import { INSTITUCIONES, GESTIONES, ESTUDIANTES, ACTIVITY } from '../../mocks/data';
+// import { INSTITUCIONES, GESTIONES, ESTUDIANTES, ACTIVITY } from '../../mocks/data';
 
 const progressData = [
   { dia: 'Lun', registros: 8 },
@@ -15,12 +15,12 @@ const progressData = [
 
 export default function EncuestadorDashboard() {
   const { user } = useAuth();
-  const institucion = INSTITUCIONES.find(i => i.id === user?.unidadEducativaId);
-  const gestion = GESTIONES.find(g => g.unidadEducativaId === user?.unidadEducativaId && g.activo);
-  const misEstudiantes = ESTUDIANTES.filter(e => e.unidadEducativaId === user?.unidadEducativaId && e.activo);
-  const conTutor = misEstudiantes.filter(e => e.padreId).length;
-  const sinTutor = misEstudiantes.length - conTutor;
-  const progreso = misEstudiantes.length > 0 ? Math.round((conTutor / misEstudiantes.length) * 100) : 0;
+  // const institucion = INSTITUCIONES.find(i => i.id === user?.unidadEducativaId);
+  // const gestion = GESTIONES.find(g => g.unidadEducativaId === user?.unidadEducativaId && g.activo);
+  // const misEstudiantes = ESTUDIANTES.filter(e => e.unidadEducativaId === user?.unidadEducativaId && e.activo);
+  // const conTutor = misEstudiantes.filter(e => e.padreId).length;
+  // const sinTutor = misEstudiantes.length - conTutor;
+  // const progreso = misEstudiantes.length > 0 ? Math.round((conTutor / misEstudiantes.length) * 100) : 0;
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -30,14 +30,14 @@ export default function EncuestadorDashboard() {
         style={{ background: 'linear-gradient(135deg, var(--color-navy), var(--color-navy-700))' }}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
+          {/* <div>
             <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>Bienvenido,</p>
             <h2 className="text-xl font-bold text-white mt-0.5">{user?.nombres} {user?.apellidos}</h2>
             {institucion && (
               <p className="text-sm mt-1 font-medium" style={{ color: 'var(--color-cyan)' }}>{institucion.nombre}</p>
             )}
             {gestion && <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{gestion.nombre} · {gestion.fechaInicio} — {gestion.fechaFin}</p>}
-          </div>
+          </div> */}
           <Link to="/encuestador/estudiantes" className="btn-primary self-start sm:self-center">
             <Plus size={16} /> Registrar estudiante
           </Link>
@@ -45,7 +45,7 @@ export default function EncuestadorDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {/* <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { icon: <GraduationCap size={20} />, label: 'Estudiantes registrados', value: misEstudiantes.length, color: '#1B6FFF', bg: 'rgba(27,111,255,0.1)' },
           { icon: <CheckCircle2 size={20} />, label: 'Registros completos', value: conTutor, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
@@ -60,10 +60,10 @@ export default function EncuestadorDashboard() {
             </div>
           </div>
         ))}
-      </div>
+      </div> */}
 
       {/* Progress */}
-      <div className="card p-5">
+      {/* <div className="card p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="section-title">Progreso de recolección</h3>
           <span className="text-sm font-bold" style={{ color: 'var(--color-blue)' }}>{progreso}%</span>
@@ -75,7 +75,7 @@ export default function EncuestadorDashboard() {
           />
         </div>
         <p className="text-xs text-slate-400 mt-2">{conTutor} de {misEstudiantes.length} registros con tutor/padre vinculado</p>
-      </div>
+      </div> */}
 
       {/* Activity chart + quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -115,7 +115,7 @@ export default function EncuestadorDashboard() {
       <div className="card p-5">
         <h3 className="section-title mb-4">Actividad reciente</h3>
         <div className="divide-y divide-slate-50">
-          {ACTIVITY.filter(a => a.tipo === 'registro_estudiante' || a.tipo === 'importacion').slice(0, 4).map(item => (
+          {/* {ACTIVITY.filter(a => a.tipo === 'registro_estudiante' || a.tipo === 'importacion').slice(0, 4).map(item => (
             <div key={item.id} className="flex items-start gap-3 py-3">
               <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(27,111,255,0.1)' }}>
                 {item.tipo === 'importacion' ? <Upload size={14} style={{ color: 'var(--color-blue)' }} /> : <GraduationCap size={14} style={{ color: 'var(--color-blue)' }} />}
@@ -125,7 +125,7 @@ export default function EncuestadorDashboard() {
                 <p className="text-xs text-slate-400 mt-0.5">{new Date(item.fecha).toLocaleDateString('es-BO', { day: '2-digit', month: 'long' })}</p>
               </div>
             </div>
-          ))}
+          ))} */}
         </div>
       </div>
     </div>

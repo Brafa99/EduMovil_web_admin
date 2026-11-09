@@ -4,7 +4,6 @@ import type {
   UnidadEducativa,
 } from '../types';
 import { apiRequest, IS_MOCK_MODE } from './client';
-import { PROFESORES } from '../mocks/data';
 
 interface BackendProfesor {
   id: string;
@@ -70,27 +69,7 @@ function mapProfesor(profesor: BackendProfesor): Profesor {
 export async function getProfesores(
   params?: { search?: string }
 ): Promise<PaginatedResponse<Profesor>> {
-  if (IS_MOCK_MODE) {
-    let data = [...PROFESORES];
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-
-      data = data.filter(
-        p =>
-          p.nombres.toLowerCase().includes(q) ||
-          p.apellidos.toLowerCase().includes(q) ||
-          p.profesorCi.includes(q)
-      );
-    }
-
-    return {
-      data,
-      total: data.length,
-      page: 1,
-      limit: 20,
-    };
-  }
+  
 
   const response =
     await apiRequest<BackendProfesor[]>(
@@ -129,17 +108,6 @@ export async function createProfesor(
   >
 ): Promise<Profesor> {
   
-if (IS_MOCK_MODE) {
-  const nuevo: Profesor = {
-    ...data,
-    id: crypto.randomUUID(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  PROFESORES.push(nuevo);
-  return nuevo;
-}
 
   const payload = {
     ci: data.profesorCi,
@@ -169,26 +137,7 @@ export async function updateProfesor(
   id: string,
   data: Partial<Profesor>
 ): Promise<Profesor> {
-  if (IS_MOCK_MODE) {
-    const idx = PROFESORES.findIndex(
-      p => p.id === id
-    );
-
-    if (idx === -1) {
-      throw {
-        statusCode: 404,
-        message: 'Profesor no encontrado',
-      };
-    }
-
-    PROFESORES[idx] = {
-      ...PROFESORES[idx],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-
-    return PROFESORES[idx];
-  }
+  
 
   const payload: Record<string, unknown> = {};
 

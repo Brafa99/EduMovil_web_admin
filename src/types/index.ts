@@ -171,6 +171,13 @@ export interface Materia {
   updatedAt: string;
 }
 
+export interface CatalogoMateria {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  activo: boolean;
+}
+
 export interface Padre {
   id: string;
   ci: string;

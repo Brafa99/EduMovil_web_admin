@@ -2,7 +2,7 @@ import type {
   Curso,
   Estudiante,
   GestionAcademica,
-  Institucion,
+  // Institucion,
   Materia,
   Nota,
 } from '../types';
@@ -14,7 +14,6 @@ import { getInstituciones } from './instituciones.api';
 import { getMaterias } from './materias.api';
 import { getNotas } from './notas.api';
 import { IS_MOCK_MODE } from './client';
-import { IMPORT_HISTORY } from '../mocks/data';
 
 export interface ReporteResumen {
   totalEstudiantes: number;
@@ -49,7 +48,7 @@ export interface ReporteData {
   inscripciones: InscripcionChartItem[];
   rendimiento: RendimientoMateriaItem[];
   instituciones: InstitucionChartItem[];
-  importaciones: typeof IMPORT_HISTORY;
+  // importaciones: typeof IMPORT_HISTORY;
 }
 
 export interface ReporteFiltros {
@@ -60,7 +59,7 @@ export interface ReporteFiltros {
 
 interface CacheData {
   estudiantes: Estudiante[];
-  instituciones: Institucion[];
+  // instituciones: Institucion[];
   gestiones: GestionAcademica[];
   cursos: Curso[];
   materias: Materia[];
@@ -193,7 +192,7 @@ async function loadBaseData(): Promise<CacheData> {
 
   cache = {
     estudiantes: getPaginatedData<Estudiante>(estudiantesResponse),
-    instituciones: getPaginatedData<Institucion>(institucionesResponse),
+    // instituciones: getPaginatedData<Institucion>(institucionesResponse),
     gestiones: getPaginatedData<GestionAcademica>(gestionesResponse),
     cursos: getPaginatedData<Curso>(cursosResponse),
     materias: getPaginatedData<Materia>(materiasResponse),
@@ -209,7 +208,7 @@ export function clearReportesCache(): void {
 
 export async function getReporteResumen(
   filtros: ReporteFiltros = {},
-): Promise<ReporteResumen> {
+){
   const data = await loadBaseData();
 
   let estudiantes = data.estudiantes;
@@ -273,9 +272,9 @@ export async function getReporteResumen(
     );
   }
 
-  const institucionesActivas = data.instituciones.filter(
-    institucion => institucion.activo,
-  ).length;
+  // const institucionesActivas = data.instituciones.filter(
+  //   institucion => institucion.activo,
+  // ).length;
 
   const notasEvaluables = notas.filter(
     nota =>
@@ -293,23 +292,23 @@ export async function getReporteResumen(
       ? Math.round((aprobadas / notasEvaluables.length) * 100)
       : 0;
 
-  return {
-    totalEstudiantes: estudiantes.filter(
-      estudiante => estudiante.activo,
-    ).length,
+  // return {
+  //   totalEstudiantes: estudiantes.filter(
+  //     estudiante => estudiante.activo,
+  //   ).length,
 
-    institucionesActivas,
+  //   institucionesActivas,
 
-    totalInstituciones: data.instituciones.length,
+  //   totalInstituciones: data.instituciones.length,
 
-    promedioAprobacion,
+  //   promedioAprobacion,
 
-    // Todavía no existe historial real de importaciones
-    // en PostgreSQL.
-    totalImportaciones: IS_MOCK_MODE
-      ? IMPORT_HISTORY.length
-      : IMPORT_HISTORY.length,
-  };
+  //   // Todavía no existe historial real de importaciones
+  //   // en PostgreSQL.
+  //   totalImportaciones: IS_MOCK_MODE
+  //     ? IMPORT_HISTORY.length
+  //     : IMPORT_HISTORY.length,
+  // };
 }
 
 export async function getInscripcionesPorGestion(
@@ -457,7 +456,7 @@ export async function getRendimientoPorMateria(
 
 export async function getEstudiantesPorInstitucion(
   filtros: ReporteFiltros = {},
-): Promise<InstitucionChartItem[]> {
+){
   const data = await loadBaseData();
 
   let estudiantes = data.estudiantes;
@@ -501,41 +500,41 @@ export async function getEstudiantesPorInstitucion(
     );
   }
 
-  return Array.from(grouped.entries())
-    .map(([institucionId, value], index) => {
-      const institucion = data.instituciones.find(
-        item => item.id === institucionId,
-      );
+  // return Array.from(grouped.entries())
+  //   .map(([institucionId, value], index) => {
+  //     const institucion = data.instituciones.find(
+  //       item => item.id === institucionId,
+  //     );
 
-      return {
-        name: institucion?.nombre ?? 'Sin institución',
-        value,
-        color: colors[index % colors.length],
-      };
-    })
-    .sort((a, b) => b.value - a.value);
+  //     return {
+  //       name: institucion?.nombre ?? 'Sin institución',
+  //       value,
+  //       color: colors[index % colors.length],
+  //     };
+  //   })
+  //   .sort((a, b) => b.value - a.value);
 }
 
-export async function getReportes(
-  filtros: ReporteFiltros = {},
-): Promise<ReporteData> {
-  const [
-    resumen,
-    inscripciones,
-    rendimiento,
-    instituciones,
-  ] = await Promise.all([
-    getReporteResumen(filtros),
-    getInscripcionesPorGestion(filtros),
-    getRendimientoPorMateria(filtros),
-    getEstudiantesPorInstitucion(filtros),
-  ]);
+// export async function getReportes(
+//   filtros: ReporteFiltros = {},
+// ): Promise<ReporteData> {
+//   const [
+//     resumen,
+//     inscripciones,
+//     rendimiento,
+//     instituciones,
+//   ] = await Promise.all([
+//     getReporteResumen(filtros),
+//     getInscripcionesPorGestion(filtros),
+//     getRendimientoPorMateria(filtros),
+//     getEstudiantesPorInstitucion(filtros),
+//   ]);
 
-  return {
-    resumen,
-    inscripciones,
-    rendimiento,
-    instituciones,
-    importaciones: IMPORT_HISTORY,
-  };
-}
+//   return {
+//     resumen,
+//     inscripciones,
+//     rendimiento,
+//     instituciones,
+//     importaciones: IMPORT_HISTORY,
+//   };
+// }

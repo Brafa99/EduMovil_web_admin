@@ -6,7 +6,6 @@ import type {
   UnidadEducativa,
 } from '../types';
 import { apiRequest, IS_MOCK_MODE } from './client';
-import { CURSOS } from '../mocks/data';
 import { getProfesores } from './profesores.api';
 
 interface BackendCurso {
@@ -219,38 +218,7 @@ export async function getCursos(
     unidadEducativaId?: string;
   },
 ): Promise<PaginatedResponse<Curso>> {
-  if (IS_MOCK_MODE) {
-    let data = [...CURSOS];
 
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-
-      data = data.filter(
-        c =>
-          c.nombre
-            .toLowerCase()
-            .includes(q) ||
-          c.paralelo
-            .toLowerCase()
-            .includes(q),
-      );
-    }
-
-    if (params?.unidadEducativaId) {
-      data = data.filter(
-        c =>
-          c.unidadEducativaId ===
-          params.unidadEducativaId,
-      );
-    }
-
-    return {
-      data,
-      total: data.length,
-      page: 1,
-      limit: 20,
-    };
-  }
 
   const [
     response,
@@ -315,31 +283,7 @@ export interface CreateCursoPayload {
 export async function createCurso(
   data: CreateCursoPayload,
 ): Promise<Curso> {
-  if (IS_MOCK_MODE) {
-    const nuevo: Curso = {
-      id: `curso-${Date.now()}`,
-      nombre: data.nombre,
-      paralelo: data.paralelo,
-      nivel: data.nivel,
-      gestionId: data.gestionId,
-      unidadEducativaId:
-        data.unidadEducativaId,
-      profesorCiTutor:
-        data.profesorCiTutor ||
-        undefined,
-      activo: data.activo,
-      totalEstudiantes: 0,
-      createdAt:
-        new Date().toISOString(),
-      updatedAt:
-        new Date().toISOString(),
-    };
-
-    CURSOS.push(nuevo);
-
-    return nuevo;
-  }
-
+ 
   const jefeCursoId =
     await resolveProfesorIdByCi(
       data.profesorCiTutor,
@@ -385,27 +329,7 @@ export async function updateCurso(
   id: string,
   data: Partial<CreateCursoPayload>,
 ): Promise<Curso> {
-  if (IS_MOCK_MODE) {
-    const idx = CURSOS.findIndex(
-      c => c.id === id,
-    );
 
-    if (idx === -1) {
-      throw {
-        statusCode: 404,
-        message: 'Curso no encontrado',
-      };
-    }
-
-    CURSOS[idx] = {
-      ...CURSOS[idx],
-      ...data,
-      updatedAt:
-        new Date().toISOString(),
-    };
-
-    return CURSOS[idx];
-  }
 
   const payload: Record<
     string,

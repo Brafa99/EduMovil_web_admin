@@ -1,6 +1,5 @@
 import type { GestionAcademica, PaginatedResponse } from '../types';
 import { apiRequest, IS_MOCK_MODE } from './client';
-import { GESTIONES } from '../mocks/data';
 
 interface BackendGestion {
   id: string;
@@ -75,24 +74,7 @@ export interface CreateGestionPayload {
 export async function getGestiones(
   params?: { search?: string },
 ): Promise<PaginatedResponse<GestionAcademica>> {
-  if (IS_MOCK_MODE) {
-    let data = [...GESTIONES];
 
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-
-      data = data.filter(
-        g => g.nombre.toLowerCase().includes(q),
-      );
-    }
-
-    return {
-      data,
-      total: data.length,
-      page: 1,
-      limit: 20,
-    };
-  }
 
   const response = await apiRequest<BackendGestion[]>(
     '/gestiones',
@@ -122,23 +104,7 @@ export async function getGestiones(
 export async function createGestion(
   data: CreateGestionPayload,
 ): Promise<GestionAcademica> {
-  if (IS_MOCK_MODE) {
-    const nuevo: GestionAcademica = {
-      id: `gest-${Date.now()}`,
-      anio: data.anio,
-      nombre: `Gestión ${data.anio}`,
-      fechaInicio: data.fechaInicio,
-      fechaFin: data.fechaFin,
-      activo: data.activa,
-      unidadEducativaId: data.unidadEducativaId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    GESTIONES.push(nuevo);
-
-    return nuevo;
-  }
+  
 
   const payload = {
     ...data,
@@ -162,44 +128,7 @@ export async function updateGestion(
   id: string,
   data: Partial<CreateGestionPayload>,
 ): Promise<GestionAcademica> {
-  if (IS_MOCK_MODE) {
-    const idx = GESTIONES.findIndex(
-      g => g.id === id,
-    );
-
-    if (idx === -1) {
-      throw {
-        statusCode: 404,
-        message: 'Gestión no encontrada',
-      };
-    }
-
-    const current = GESTIONES[idx];
-
-    GESTIONES[idx] = {
-      ...current,
-      ...(data.anio !== undefined && {
-        anio: data.anio,
-        nombre: `Gestión ${data.anio}`,
-      }),
-      ...(data.fechaInicio !== undefined && {
-        fechaInicio: data.fechaInicio,
-      }),
-      ...(data.fechaFin !== undefined && {
-        fechaFin: data.fechaFin,
-      }),
-      ...(data.activa !== undefined && {
-        activo: data.activa,
-      }),
-      ...(data.unidadEducativaId !== undefined && {
-        unidadEducativaId: data.unidadEducativaId,
-      }),
-      updatedAt: new Date().toISOString(),
-    };
-
-    return GESTIONES[idx];
-  }
-
+ 
   const payload = {
     ...data,
     ...(data.fechaInicio !== undefined && {

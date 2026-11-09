@@ -5,7 +5,7 @@ import type {
   Profesor,
 } from '../types';
 import { apiRequest, IS_MOCK_MODE } from './client';
-import { MATERIAS } from '../mocks/data';
+// import { MATERIAS } from '../mocks/data';
 
 type CursoResumen = Pick<Curso, 'id' | 'nombre'>;
 
@@ -133,6 +133,7 @@ export interface CreateMateriaPayload {
   cursoId: string;
   profesorCi?: string;
   activo: boolean;
+  catalogoMateriaId: string;
   unidadEducativaId: string;
 }
 
@@ -140,25 +141,6 @@ export async function getMaterias(params?: {
   search?: string;
   cursoId?: string;
 }): Promise<PaginatedResponse<Materia>> {
-  if (IS_MOCK_MODE) {
-    let data = [...MATERIAS];
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-      data = data.filter(m => m.nombre.toLowerCase().includes(q));
-    }
-
-    if (params?.cursoId) {
-      data = data.filter(m => m.cursoId === params.cursoId);
-    }
-
-    return {
-      data,
-      total: data.length,
-      page: 1,
-      limit: data.length,
-    };
-  }
 
   // Traer todas las materias sin paginación truncada
   const response = await apiRequest<BackendMateria[]>('/materias?limit=100');
@@ -185,37 +167,24 @@ export async function getMaterias(params?: {
 export async function createMateria(
   data: CreateMateriaPayload
 ): Promise<Materia> {
-  if (IS_MOCK_MODE) {
-    const nuevo: Materia = {
-      id: `mat-${Date.now()}`,
-      nombre: data.nombre,
-      cursoId: data.cursoId,
-      profesorCi: data.profesorCi || undefined,
-      activo: data.activo,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
 
-    MATERIAS.push(nuevo);
-    return nuevo;
-  }
 
   const payload = {
     nombreMateria: data.nombre,
     cursoId: data.cursoId,
     profesorCi: data.profesorCi || undefined,
     unidadEducativaId: data.unidadEducativaId,
+    catalogoMateriaId: data.catalogoMateriaId, // <-- Agregado al body del POST
     activo: data.activo,
   };
 
-  const response =
-    await apiRequest<BackendMateria>(
-      '/materias',
-      {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }
-    );
+  const response = await apiRequest<BackendMateria>(
+    '/materias',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  );
 
   return mapMateria(response);
 }
@@ -226,26 +195,7 @@ export async function updateMateria(
     unidadEducativaId?: string;
   }
 ): Promise<Materia> {
-  if (IS_MOCK_MODE) {
-    const idx = MATERIAS.findIndex(
-      m => m.id === id
-    );
 
-    if (idx === -1) {
-      throw {
-        statusCode: 404,
-        message: 'Materia no encontrada',
-      };
-    }
-
-    MATERIAS[idx] = {
-      ...MATERIAS[idx],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-
-    return MATERIAS[idx];
-  }
 
   const payload: Record<string, unknown> = {};
 
@@ -262,22 +212,25 @@ export async function updateMateria(
   }
 
   if (data.unidadEducativaId !== undefined) {
-    payload.unidadEducativaId =
-      data.unidadEducativaId;
+    payload.unidadEducativaId = data.unidadEducativaId;
+  }
+
+  // <-- NUEVO BLOQUE: Evalúa y agrega el catálogo al PATCH -->
+  if (data.catalogoMateriaId !== undefined) {
+    payload.catalogoMateriaId = data.catalogoMateriaId || null;
   }
 
   if (data.activo !== undefined) {
     payload.activo = data.activo;
   }
 
-  const response =
-    await apiRequest<BackendMateria>(
-      `/materias/${id}`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      }
-    );
+  const response = await apiRequest<BackendMateria>(
+    `/materias/${id}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }
+  );
 
   return mapMateria(response);
 }

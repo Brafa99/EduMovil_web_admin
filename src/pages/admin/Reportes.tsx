@@ -29,7 +29,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Badge } from '../../components/ui/Badge';
 
 import {
-  getReportes,
+  // getReportes,
   type ReporteData,
   type ReporteFiltros,
 } from '../../api/reportes.api';
@@ -170,9 +170,9 @@ export default function Reportes() {
       setLoading(true);
       setError(null);
 
-      const data = await getReportes(filtros);
+      // const data = await getReportes(filtros);
 
-      setReportes(data);
+      // setReportes(data);
     } catch (err) {
       console.error(
         'Error cargando reportes:',
@@ -900,23 +900,27 @@ export default function Reportes() {
             <button
               className="btn-ghost text-xs flex items-center gap-1"
               type="button"
-              onClick={() => {
-                if (!reportes) return;
+              onClick={() => 
+                {
+                // if (!reportes) return;
 
-                downloadCsv(
-                  'edumovil-importaciones.csv',
-                  reportes.importaciones.map(
-                    item => ({
-                      archivo: item.archivo,
-                      tipo: item.tipo,
-                      creados: item.creados,
-                      errores: item.errores,
-                      fecha: item.fecha,
-                      estado: item.estado,
-                    }),
-                  ),
-                );
-              }}
+                // downloadCsv(
+                //   'edumovil-importaciones.csv',
+                //   reportes.importaciones.map(
+                //     item => ({
+                //       archivo: item.archivo,
+                //       tipo: item.tipo,
+                //       creados: item.creados,
+                //       errores: item.errores,
+                //       fecha: item.fecha,
+                //       estado: item.estado,
+                //     }),
+                //   ),
+                // );
+
+              }
+            
+            }
             >
               <Download size={13} />
               Exportar
@@ -941,7 +945,7 @@ export default function Reportes() {
 
               <tbody>
 
-                {reportes?.importaciones.map(
+                {/* {reportes?.importaciones.map(
                   imp => (
                     <tr key={imp.id}>
 
@@ -997,7 +1001,7 @@ export default function Reportes() {
 
                     </tr>
                   ),
-                )}
+                )} */}
 
               </tbody>
 

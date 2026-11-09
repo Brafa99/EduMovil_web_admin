@@ -22,6 +22,8 @@ import EncuestadorEstudiantes from '../pages/encuestador/Estudiantes';
 import EncuestadorCursos from '../pages/encuestador/Cursos';
 import EncuestadorImportacion from '../pages/encuestador/Importacion';
 import EncuestadorPerfil from '../pages/encuestador/Perfil';
+import CatalogoGlobal from '../pages/admin/CatalogoGlobal';
+import Subtemas from '../pages/admin/Subtemas';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -68,6 +70,8 @@ export const router = createBrowserRouter([
       { path: 'admin/profesores', element: <RequireRole role="ADMIN"><Profesores /></RequireRole> },
       { path: 'admin/materias', element: <RequireRole role="ADMIN"><Materias /></RequireRole> },
       { path: 'admin/temas', element: <RequireRole role="ADMIN"><Temas /></RequireRole> },
+      { path: 'admin/subtemas', element: <RequireRole role="ADMIN"><Subtemas /></RequireRole> },
+      { path: 'admin/catalogo', element: <RequireRole role="ADMIN"><CatalogoGlobal /></RequireRole> },
       { path: 'admin/estudiantes', element: <RequireRole role="ADMIN"><Estudiantes /></RequireRole> },
       { path: 'admin/padres', element: <RequireRole role="ADMIN"><Padres /></RequireRole> },
       { path: 'admin/notas', element: <RequireRole role="ADMIN"><Notas /></RequireRole> },

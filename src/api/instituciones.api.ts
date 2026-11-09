@@ -139,27 +139,6 @@ export async function getInstituciones(
   },
 ): Promise<PaginatedResponse<UnidadEducativa>> {
 
-  if (IS_MOCK_MODE) {
-    let data = [...INSTITUCIONES];
-
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-
-      data = data.filter(
-        i =>
-          i.nombre.toLowerCase().includes(q) ||
-          i.ciudad.toLowerCase().includes(q),
-      );
-    }
-
-    return {
-      data,
-      total: data.length,
-      page: params?.page ?? 1,
-      limit: params?.limit ?? 20,
-    };
-  }
-
   const response = await apiRequest<BackendUnidadEducativa[]>(
     '/unidades-educativas',
   );
@@ -188,18 +167,6 @@ export async function getInstitucion(
   id: string,
 ): Promise<UnidadEducativa> {
 
-  if (IS_MOCK_MODE) {
-    const item = INSTITUCIONES.find(i => i.id === id);
-
-    if (!item) {
-      throw {
-        statusCode: 404,
-        message: 'Institución no encontrada',
-      };
-    }
-
-    return item;
-  }
 
   const response = await apiRequest<BackendUnidadEducativa>(
     `/unidades-educativas/${id}`,
@@ -212,24 +179,6 @@ export async function getInstitucion(
 export async function createInstitucion(
   data: InstitucionPayload,
 ): Promise<UnidadEducativa> {
-  if (IS_MOCK_MODE) {
-    const ahora = new Date().toISOString();
-
-    const nuevo: UnidadEducativa = {
-      ...data,
-      id: `inst-${Date.now()}`,
-      tipo: 'unidad_educativa',
-      ciudad: data.municipio ?? '',
-      departamento: data.departamento ?? '',
-      totalEstudiantes: data.numeroAlumnos ?? 0,
-      totalCursos: 0,
-      createdAt: ahora,
-      updatedAt: ahora,
-    };
-
-    INSTITUCIONES.push(nuevo);
-    return nuevo;
-  }
 
   const payload = {
     ...data,
@@ -250,29 +199,6 @@ export async function updateInstitucion(
   id: string,
   data: Partial<InstitucionPayload>,
 ): Promise<UnidadEducativa> {
-  if (IS_MOCK_MODE) {
-    const idx = INSTITUCIONES.findIndex(i => i.id === id);
-
-    if (idx === -1) {
-      throw {
-        statusCode: 404,
-        message: 'Institución no encontrada',
-      };
-    }
-
-    INSTITUCIONES[idx] = {
-      ...INSTITUCIONES[idx],
-      ...data,
-      ciudad: data.municipio ?? INSTITUCIONES[idx].ciudad,
-      departamento:
-        data.departamento ?? INSTITUCIONES[idx].departamento,
-      totalEstudiantes:
-        data.numeroAlumnos ?? INSTITUCIONES[idx].totalEstudiantes,
-      updatedAt: new Date().toISOString(),
-    };
-
-    return INSTITUCIONES[idx];
-  }
 
   const payload = { ...data };
 
