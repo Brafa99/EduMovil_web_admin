@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface Patrocinador {
   id: number;
@@ -8,12 +8,28 @@ interface Patrocinador {
 }
 
 export default function PatrocinadoresPage() {
-  const [patrocinadores, setPatrocinadores] = useState<Patrocinador[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // 1. Cargamos los datos guardados en el navegador al iniciar la página
+  const [patrocinadores, setPatrocinadores] = useState<Patrocinador[]>(() => {
+    const guardados = localStorage.getItem('lista_patrocinadores');
+    if (guardados) {
+      try {
+        return JSON.parse(guardados);
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [nombreEncargado, setNombreEncargado] = useState('');
   const [telefonoEncargado, setTelefonoEncargado] = useState('');
   const [imagen, setImagen] = useState<File | null>(null);
+
+  // 2. Cada vez que la lista cambie, la guardamos automáticamente en el navegador
+  useEffect(() => {
+    localStorage.setItem('lista_patrocinadores', JSON.stringify(patrocinadores));
+  }, [patrocinadores]);
 
   const handleGuardar = (e: React.FormEvent) => {
     e.preventDefault();
