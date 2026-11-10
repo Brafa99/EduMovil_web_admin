@@ -26,7 +26,7 @@ export default function PatrocinadoresPage() {
   const [telefonoEncargado, setTelefonoEncargado] = useState('');
   const [imagen, setImagen] = useState<File | null>(null);
 
-  // 2. Cada vez que la lista cambie, la guardamos automáticamente en el navegador
+
   useEffect(() => {
     localStorage.setItem('lista_patrocinadores', JSON.stringify(patrocinadores));
   }, [patrocinadores]);
@@ -102,7 +102,7 @@ export default function PatrocinadoresPage() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl relative">
             <div className="flex justify-between items-center pb-4 border-b">
               <h3 className="text-lg font-bold text-gray-800">Nuevo patrocinador</h3>
