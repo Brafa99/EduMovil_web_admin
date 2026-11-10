@@ -19,7 +19,7 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import { FormField, Input } from '../../components/ui/FormField';
-
+import { MapPickerModal } from '../../components/MapPickerModal'; 
 import {
   getInstituciones,
   createInstitucion,
@@ -115,6 +115,15 @@ export default function Instituciones() {
 
   const [saving, setSaving] = useState(false);
 
+  const [isMapOpen, setIsMapOpen] = useState(false);
+
+  const handleLocationSelected = (lat: number, lng: number) => {
+    setForm(f => ({
+      ...f,
+      latitud: Number(lat.toFixed(6)),
+      longitud: Number(lng.toFixed(6)),
+    }));
+  };
   const [confirmToggle, setConfirmToggle] =
     useState<UnidadEducativa | null>(null);
 
@@ -581,9 +590,20 @@ const openCreate = () => {
 
   {/* UBICACIÓN */}
   <section className="space-y-3">
-    <div className="flex items-center gap-2 border-b pb-2">
-      <MapPin size={18} className="text-emerald-700" />
-      <h3 className="font-semibold text-slate-700">Ubicación</h3>
+    <div className="flex items-center justify-between border-b pb-2">
+      <div className="flex items-center gap-2">
+        <MapPin size={18} className="text-emerald-700" />
+        <h3 className="font-semibold text-slate-700">Ubicación</h3>
+      </div>
+
+      {/* BOTÓN PARA ABRIR EL MAPA */}
+      <button
+        type="button"
+        onClick={() => setIsMapOpen(true)}
+        className="flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 font-medium transition shadow-sm"
+      >
+        <MapPin size={14} /> Seleccionar en Mapa
+      </button>
     </div>
 
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -613,20 +633,19 @@ const openCreate = () => {
 
     <div className="grid grid-cols-2 gap-3">
       <FormField label="Latitud">
-        
-<input
-  type="number"
-  step="any"
-  value={form.latitud ?? ''}
-  onChange={e =>
-    setForm(f => ({
-      ...f,
-      latitud: e.target.value === '' ? null : Number(e.target.value),
-    }))
-  }
-  placeholder="-16.5000"
-  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-/>
+        <input
+          type="number"
+          step="any"
+          value={form.latitud ?? ''}
+          onChange={e =>
+            setForm(f => ({
+              ...f,
+              latitud: e.target.value === '' ? null : Number(e.target.value),
+            }))
+          }
+          placeholder="-16.5000"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        />
       </FormField>
       <FormField label="Longitud">
         <Input
@@ -879,6 +898,16 @@ const openCreate = () => {
     )}
   </section>
 </div>
+
+{/* MODAL DEL MAPA */}
+      <MapPickerModal
+        isOpen={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        onSelectLocation={handleLocationSelected}
+        initialLat={form.latitud ?? -16.5000}
+        initialLng={form.longitud ?? -68.1500}
+      />
+
       </Modal>
 
       <ConfirmDialog

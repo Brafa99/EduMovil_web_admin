@@ -7,7 +7,7 @@ import { ActionsMenu } from '../../components/ui/ActionsMenu';
 import { Edit2, Power, PowerOff, ListTree } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
-// Ajusta estas importaciones a tu api client
+
 import { getCatalogosMateria, createCatalogoMateria, updateCatalogoMateria } from '../../api/catalogo.api';
 import type { CatalogoMateria } from '../../types';
 
@@ -90,6 +90,7 @@ export default function CatalogoGlobal() {
           },
         ]}
       />
+      
 
       <Modal
         open={modal.open}

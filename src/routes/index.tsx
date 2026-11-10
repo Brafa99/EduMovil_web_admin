@@ -24,7 +24,7 @@ import EncuestadorImportacion from '../pages/encuestador/Importacion';
 import EncuestadorPerfil from '../pages/encuestador/Perfil';
 import CatalogoGlobal from '../pages/admin/CatalogoGlobal';
 import Subtemas from '../pages/admin/Subtemas';
-
+import PatrocinadoresPage from '../pages/admin/PatrocinadoresPage';
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return (
@@ -79,6 +79,7 @@ export const router = createBrowserRouter([
       { path: 'admin/reportes', element: <RequireRole role="ADMIN"><Reportes /></RequireRole> },
       { path: 'admin/usuarios', element: <RequireRole role="ADMIN"><Usuarios /></RequireRole> },
       { path: 'admin/importacion', element: <RequireRole role="ADMIN"><Importacion /></RequireRole> },
+      { path: 'admin/patrocinadores', element: <RequireRole role="ADMIN"><PatrocinadoresPage /></RequireRole> },
       // Encuestador routes
       { path: 'encuestador', element: <RequireRole role="ENCUESTADOR"><EncuestadorDashboard /></RequireRole> },
       { path: 'encuestador/institucion', element: <RequireRole role="ENCUESTADOR"><EncuestadorInstitucion /></RequireRole> },

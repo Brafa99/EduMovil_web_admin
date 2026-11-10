@@ -74,6 +74,8 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, confir
       }
     >
       <p className="text-sm text-slate-600">{message}</p>
+      
     </Modal>
+    
   );
 }

@@ -5,7 +5,8 @@ import {
   UserCog, BarChart3, Settings, ChevronLeft, ChevronRight,
   X, Signal, MapPin, ClipboardCheck, User, Globe,
   BookDashed,
-  BookAudio
+  BookAudio,
+  Handshake 
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 
@@ -19,6 +20,7 @@ interface SidebarProps {
 const ADMIN_NAV = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/admin' },
   { label: 'Instituciones', icon: Building2, to: '/admin/instituciones' },
+  { label: 'Patrocinadores', icon: Handshake, to: '/admin/patrocinadores' }, 
   { label: 'Gestiones Académicas', icon: CalendarDays, to: '/admin/gestiones' },
   { label: 'Cursos y Paralelos', icon: BookOpen, to: '/admin/cursos' },
   { label: 'Profesores', icon: Users, to: '/admin/profesores' },
