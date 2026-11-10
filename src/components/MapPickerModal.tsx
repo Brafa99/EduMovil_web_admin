@@ -95,9 +95,10 @@ export const MapPickerModal: React.FC<MapPickerProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-      <div className="bg-white rounded-xl w-full max-w-2xl p-4 shadow-2xl relative">
+return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-2xl relative">
+...
         
         {/* Cabecera */}
         <div className="flex justify-between items-center pb-3 border-b">
