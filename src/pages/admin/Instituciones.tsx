@@ -12,6 +12,9 @@ import {
   Globe,
   Users,
   Clock3,
+  Ban,
+  CheckCircle,
+  X
 } from 'lucide-react';
 
 import { CrudPage } from '../../components/ui/CrudPage';
@@ -19,7 +22,7 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import { FormField, Input } from '../../components/ui/FormField';
-
+import { MapPickerModal } from '../../components/MapPickerModal'; 
 import {
   getInstituciones,
   createInstitucion,
@@ -95,12 +98,15 @@ export default function Instituciones() {
   const [imagenPrincipal, setImagenPrincipal] = useState<File | null>(null);
   const [imagenPortada, setImagenPortada] = useState<File | null>(null);
   const [nuevasImagenes, setNuevasImagenes] = useState<File[]>([]);
+  // Estados para los nuevos modales
+  const [detailModalItem, setDetailModalItem] = useState<any>(null); // Reemplaza 'any' por tu interface de Institucion si la tienes
+  const [confirmDelete, setConfirmDelete] = useState<any>(null);
 
   const [previewPrincipal, setPreviewPrincipal] = useState('');
   const [previewPortada, setPreviewPortada] = useState('');
   const [previewGaleria, setPreviewGaleria] = useState<string[]>([]);
   const { toast } = useToast();
-
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
 
   const [modal, setModal] = useState<{
@@ -115,6 +121,18 @@ export default function Instituciones() {
 
   const [saving, setSaving] = useState(false);
 
+  const [isMapOpen, setIsMapOpen] = useState(false);
+
+  // Lo lee de tu .env local, o de los settings de Vercel en producción
+  const API_BASE = import.meta.env.VITE_API_URL || 'https://backend-edumovil.onrender.com/api/v1';
+
+  const handleLocationSelected = (lat: number, lng: number) => {
+    setForm(f => ({
+      ...f,
+      latitud: Number(lat.toFixed(6)),
+      longitud: Number(lng.toFixed(6)),
+    }));
+  };
   const [confirmToggle, setConfirmToggle] =
     useState<UnidadEducativa | null>(null);
 
@@ -188,6 +206,44 @@ const openCreate = () => {
   resetImages();
   setModal({ open: true, data: row });
 };
+
+
+  const handleDeleteDefinitivo = async () => {
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/instituciones/${confirmDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${token}` // Si usas token
+        }
+      });
+
+      if (!response.ok) throw new Error('Error al eliminar la institución');
+
+      // 1. Guardamos el ID y cerramos el modal
+      const idEliminado = confirmDelete.id;
+      setConfirmDelete(null);
+
+      // 2. ACTUALIZACIÓN INMEDIATA DE LA TABLA
+      // Asumiendo que tu estado que guarda la lista se llama "instituciones" o "data".
+      // Descomenta y ajusta el nombre de tu state según cómo lo tengas:
+      // setInstituciones(prev => prev.filter(item => item.id !== idEliminado)); 
+
+      // O si tienes una función que hace el fetch de nuevo, llámala aquí:
+      // fetchInstituciones(); 
+
+      // 3. MENSAJE VISUAL ELEGANTE (Toast)
+      setToastMessage('La institución fue eliminada correctamente.');
+      setTimeout(() => setToastMessage(null), 3000); // Se oculta a los 3 segundos
+
+    } catch (error) {
+      console.error(error);
+      setToastMessage('Error: No se pudo eliminar la institución.');
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
 
   const handleSave = async () => {
   if (!form.nombre.trim()) {
@@ -423,37 +479,30 @@ const openCreate = () => {
                 items={[
                   {
                     label: 'Ver detalle',
-                    icon: (
-                      <Eye size={14} />
-                    ),
-                    onClick: () => {},
+                    icon: <Eye size={14} />,
+                    onClick: () => setDetailModalItem(r), // <-- Abrirá el modal de detalles
                   },
-
                   {
                     label: 'Editar',
-                    icon: (
-                      <Edit2 size={14} />
-                    ),
-                    onClick: () =>
-                      openEdit(r),
+                    icon: <Edit2 size={14} />,
+                    onClick: () => openEdit(r),
                   },
-
                   {
-                    label: r.activo
-                      ? 'Desactivar'
-                      : 'Activar',
+                    label: r.activo ? 'Desactivar' : 'Activar',
                     icon: r.activo ? (
-                      <PowerOff
-                        size={14}
-                      />
+                      <Ban size={14} /> // Icono de bloqueo/pausa (más claro que PowerOff)
                     ) : (
-                      <Power size={14} />
+                      <CheckCircle size={14} /> // Icono de check (más claro que Power)
                     ),
-                    onClick: () =>
-                      setConfirmToggle(r),
-                    variant: r.activo
-                      ? 'danger'
-                      : 'default',
+                    onClick: () => setConfirmToggle(r),
+                    variant: 'default',
+                  },
+                  {
+                    // NUEVO BOTÓN: ELIMINAR DEFINITIVAMENTE
+                    label: 'Eliminar',
+                    icon: <Trash2 size={14} />,
+                    onClick: () => setConfirmDelete(r), // <-- Abrirá el modal de confirmación
+                    variant: 'danger',
                   },
                 ]}
               />
@@ -581,9 +630,20 @@ const openCreate = () => {
 
   {/* UBICACIÓN */}
   <section className="space-y-3">
-    <div className="flex items-center gap-2 border-b pb-2">
-      <MapPin size={18} className="text-emerald-700" />
-      <h3 className="font-semibold text-slate-700">Ubicación</h3>
+    <div className="flex items-center justify-between border-b pb-2">
+      <div className="flex items-center gap-2">
+        <MapPin size={18} className="text-emerald-700" />
+        <h3 className="font-semibold text-slate-700">Ubicación</h3>
+      </div>
+
+      {/* BOTÓN PARA ABRIR EL MAPA */}
+      <button
+        type="button"
+        onClick={() => setIsMapOpen(true)}
+        className="flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 font-medium transition shadow-sm"
+      >
+        <MapPin size={14} /> Seleccionar en Mapa
+      </button>
     </div>
 
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -613,20 +673,19 @@ const openCreate = () => {
 
     <div className="grid grid-cols-2 gap-3">
       <FormField label="Latitud">
-        
-<input
-  type="number"
-  step="any"
-  value={form.latitud ?? ''}
-  onChange={e =>
-    setForm(f => ({
-      ...f,
-      latitud: e.target.value === '' ? null : Number(e.target.value),
-    }))
-  }
-  placeholder="-16.5000"
-  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-/>
+        <input
+          type="number"
+          step="any"
+          value={form.latitud ?? ''}
+          onChange={e =>
+            setForm(f => ({
+              ...f,
+              latitud: e.target.value === '' ? null : Number(e.target.value),
+            }))
+          }
+          placeholder="-16.5000"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        />
       </FormField>
       <FormField label="Longitud">
         <Input
@@ -879,35 +938,186 @@ const openCreate = () => {
     )}
   </section>
 </div>
+
+{/* MODAL DEL MAPA */}
+      <MapPickerModal
+        isOpen={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        onSelectLocation={handleLocationSelected}
+        initialLat={form.latitud ?? -16.5000}
+        initialLng={form.longitud ?? -68.1500}
+      />
+
       </Modal>
 
+      
+
+      {/* ==========================================
+          MODALES INDEPENDIENTES (FUERA DEL FORMULARIO)
+          ========================================== */}
+
+        {/* 1. MODAL: VER DETALLES COMPLETOS */}
+        {detailModalItem && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+
+              {/* Cabecera con imagen de portada (si hay) o color sólido */}
+              <div className="relative h-52 bg-slate-800 flex-shrink-0">
+                {detailModalItem.imagen_portada_url && (
+                  <img src={detailModalItem.imagen_portada_url} alt="Portada" className="w-full h-full object-cover opacity-60" />
+                )}
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm ${detailModalItem.activo ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                    {detailModalItem.activo ? 'ACTIVO' : 'INACTIVO'}
+                  </span>
+                  <button onClick={() => setDetailModalItem(null)} className="bg-white/20 hover:bg-white/40 text-white rounded-full p-1 backdrop-blur-md transition">
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Cuerpo del Modal */}
+              <div className="px-6 pb-6 overflow-y-auto relative">
+                {/* Imagen Principal tipo Perfil */}
+                <div className="relative -mt-0 mb-4 flex items-end gap-4">
+                  <div className="w-24 h-24 rounded-xl border-4 border-white bg-slate-100 shadow-md overflow-hidden flex-shrink-0">
+                    {detailModalItem.imagen_principal_url ? (
+                      <img src={detailModalItem.imagen_principal_url} alt="Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400"><Building2 size={40} /></div>
+                    )}
+                  </div>
+                  <div className="pb-1">
+                    <h3 className="text-2xl font-bold text-slate-800 leading-tight">{detailModalItem.nombre}</h3>
+                    <p className="text-sm font-medium text-blue-600">{detailModalItem.codigo_institucional || 'Sin código'} • {detailModalItem.tipo_institucion}</p>
+                  </div>
+                </div>
+
+                {detailModalItem.descripcion && (
+                  <p className="text-sm text-slate-600 mb-6 italic border-l-4 border-slate-200 pl-3">{detailModalItem.descripcion}</p>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Bloque: Ubicación */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-bold text-slate-800 border-b pb-1 flex items-center gap-2"><MapPin size={16} className="text-slate-400" /> Ubicación</h4>
+                    <ul className="text-sm text-slate-600 space-y-1.5">
+                      <li><strong>Departamento:</strong> {detailModalItem.departamento || '-'}</li>
+                      <li><strong>Provincia:</strong> {detailModalItem.provincia || '-'}</li>
+                      <li><strong>Municipio:</strong> {detailModalItem.municipio || '-'}</li>
+                      <li><strong>Zona:</strong> {detailModalItem.zona || '-'}</li>
+                      <li><strong>Dirección:</strong> {detailModalItem.direccion || '-'}</li>
+                      {(detailModalItem.latitud && detailModalItem.longitud) && (
+                        <li className="text-xs font-mono bg-slate-100 p-1 rounded mt-1">GPS: {detailModalItem.latitud}, {detailModalItem.longitud}</li>
+                      )}
+                    </ul>
+                  </div>
+
+                  {/* Bloque: Contacto y Personal */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-bold text-slate-800 border-b pb-1 flex items-center gap-2"><Globe size={16} className="text-slate-400" /> Contacto y Directiva</h4>
+                    <ul className="text-sm text-slate-600 space-y-1.5">
+                      <li><strong>Director:</strong> {detailModalItem.director || '-'}</li>
+                      <li><strong>Encargado:</strong> {detailModalItem.encargador || '-'}</li>
+                      <li><strong>Email:</strong> {detailModalItem.email || '-'}</li>
+                      <li><strong>Teléfonos:</strong> {detailModalItem.telefono || '-'} {detailModalItem.telefono_alternativo ? ` / ${detailModalItem.telefono_alternativo}` : ''}</li>
+                      <li><strong>Sitio Web:</strong> {detailModalItem.sitio_web ? <a href={detailModalItem.sitio_web} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">{detailModalItem.sitio_web}</a> : '-'}</li>
+                    </ul>
+                  </div>
+
+                {/* Bloque: Datos Académicos */}
+                <div className="space-y-3 md:col-span-2">
+                  <h4 className="text-sm font-bold text-slate-800 border-b pb-1 flex items-center gap-2"><Users size={16} className="text-slate-400" /> Capacidad y Oferta Académica</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-slate-600">
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                      <p className="text-xs text-slate-400 font-semibold mb-1">ALUMNOS DECLARADOS</p>
+                      <p className="text-lg font-bold text-slate-700">{detailModalItem.numeroAlumnos || detailModalItem.numero_alumnos || 0}</p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                      <p className="text-xs text-slate-400 font-semibold mb-1">CAPACIDAD MAX.</p>
+                      <p className="text-lg font-bold text-slate-700">{detailModalItem.cantidadMaximaAlumnos || detailModalItem.cantidad_maxima_alumnos || 0}</p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                      <p className="text-xs text-slate-400 font-semibold mb-1">NIVELES</p>
+                      <p className="font-medium text-slate-700 truncate">
+                        {(() => {
+                          const niveles = detailModalItem.nivelesEducativos || detailModalItem.niveles_educativos;
+                          if (!niveles) return '-';
+                          return Array.isArray(niveles) ? niveles.join(', ') : niveles.replace(/[\[\]"]/g, '');
+                        })()}
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                      <p className="text-xs text-slate-400 font-semibold mb-1">TURNOS</p>
+                      <p className="font-medium text-slate-700 truncate">
+                        {(() => {
+                          const turnos = detailModalItem.turnos || detailModalItem.turnos_educativos; // Ajustado por si acaso
+                          if (!turnos) return '-';
+                          return Array.isArray(turnos) ? turnos.join(', ') : (typeof turnos === 'string' ? turnos.replace(/[\[\]"]/g, '') : '-');
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-slate-200 flex justify-between items-center bg-slate-50 flex-shrink-0">
+                <span className="text-xs text-slate-400 font-mono">ID: {detailModalItem.id}</span>
+                <button onClick={() => setDetailModalItem(null)} className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold transition shadow-sm">
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 2. MODAL: CONFIRMAR ELIMINACIÓN DEFINITIVA */}
+        {confirmDelete && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">¿Eliminar Institución?</h3>
+                <p className="text-slate-600 text-sm">
+                  Estás a punto de eliminar definitivamente <strong>{confirmDelete.nombre}</strong>. Esta acción no se puede deshacer y borrará todos sus datos de la plataforma.
+                </p>
+              </div>
+              <div className="flex justify-end gap-3 p-4 bg-slate-50 border-t border-slate-200">
+                <button onClick={() => setConfirmDelete(null)} className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 font-medium transition">
+                  Cancelar
+                </button>
+                <button onClick={handleDeleteDefinitivo} className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-sm transition flex items-center gap-2">
+                  <Trash2 size={16} /> Sí, Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 3. DIÁLOGO ORIGINAL: ACTIVAR / DESACTIVAR */}
       <ConfirmDialog
         open={!!confirmToggle}
-        onClose={() =>
-          setConfirmToggle(null)
-        }
+        onClose={() => setConfirmToggle(null)}
         onConfirm={handleToggle}
-        title={
-          confirmToggle?.activo
-            ? 'Desactivar institución'
-            : 'Activar institución'
-        }
-        message={`¿Confirmas ${
-          confirmToggle?.activo
-            ? 'desactivar'
-            : 'activar'
-        } "${confirmToggle?.nombre}"?`}
-        confirmLabel={
-          confirmToggle?.activo
-            ? 'Desactivar'
-            : 'Activar'
-        }
-        variant={
-          confirmToggle?.activo
-            ? 'danger'
-            : 'warning'
-        }
+        title={confirmToggle?.activo ? 'Desactivar institución' : 'Activar institución'}
+        message={`¿Confirmas ${confirmToggle?.activo ? 'desactivar' : 'activar'} "${confirmToggle?.nombre}"?`}
+        confirmLabel={confirmToggle?.activo ? 'Desactivar' : 'Activar'}
+        variant={confirmToggle?.activo ? 'danger' : 'warning'}
       />
+      {/* NOTIFICACIÓN FLOTANTE (TOAST) */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-[100] bg-slate-800 text-white px-5 py-3 rounded-lg shadow-2xl flex items-center gap-3 animate-bounce">
+          {toastMessage.includes('Error') ? (
+            <X size={20} className="text-red-400" />
+          ) : (
+            <CheckCircle size={20} className="text-green-400" />
+          )}
+          <span className="text-sm font-medium">{toastMessage}</span>
+        </div>
+      )}
     </>
   );
 }

@@ -189,6 +189,12 @@ export async function createMateria(
   return mapMateria(response);
 }
 
+export async function deleteMateria(id: string): Promise<void> {
+  await apiRequest(`/materias/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function updateMateria(
   id: string,
   data: Partial<Materia> & {

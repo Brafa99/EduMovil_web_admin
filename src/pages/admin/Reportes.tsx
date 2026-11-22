@@ -1,1024 +1,219 @@
-import {
-  Download,
-  BarChart3,
-  TrendingUp,
-  Users,
-  Building2,
-  Filter,
-  RefreshCw,
-} from 'lucide-react';
+// Reportes.tsx
+import React, { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { fetchReporteData, ReporteFiltros, ReporteDashboard } from '../../api/reportes.api';
 
-import { useEffect, useMemo, useState } from 'react';
-
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-
-import { PageHeader } from '../../components/ui/PageHeader';
-import { Badge } from '../../components/ui/Badge';
-
-import {
-  // getReportes,
-  type ReporteData,
-  type ReporteFiltros,
-} from '../../api/reportes.api';
-
-import { getInstituciones } from '../../api/instituciones.api';
-import { getGestiones } from '../../api/gestiones.api';
-
-import type {
-  GestionAcademica,
-  UnidadEducativa,
-} from '../../types';
-
-const ESTADO_COLORS = {
-  completado: 'green',
-  parcial: 'orange',
-  fallido: 'red',
-} as const;
-
-function downloadCsv(
-  filename: string,
-  rows: Record<string, unknown>[],
-): void {
-  if (rows.length === 0) {
-    return;
-  }
-
-  const headers = Object.keys(rows[0]);
-
-  const escapeValue = (value: unknown): string => {
-    const text = String(value ?? '');
-
-    if (
-      text.includes(',') ||
-      text.includes('"') ||
-      text.includes('\n')
-    ) {
-      return `"${text.replace(/"/g, '""')}"`;
-    }
-
-    return text;
-  };
-
-  const csv = [
-    headers.join(','),
-    ...rows.map(row =>
-      headers
-        .map(header => escapeValue(row[header]))
-        .join(','),
-    ),
-  ].join('\n');
-
-  const blob = new Blob(
-    [csv],
-    { type: 'text/csv;charset=utf-8;' },
-  );
-
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = filename;
-  link.click();
-
-  URL.revokeObjectURL(url);
-}
+const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b'];
 
 export default function Reportes() {
-  const [reportes, setReportes] =
-    useState<ReporteData | null>(null);
+  const [data, setData] = useState<ReporteDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'GENERAL' | 'ACADEMICO' | 'PAGOS'>('GENERAL');
 
-  const [instituciones, setInstituciones] =
-    useState<UnidadEducativa[]>([]);
+  const [filtros, setFiltros] = useState<ReporteFiltros>({
+    modulo: 'GENERAL',
+    fechaInicio: '',
+    fechaFin: ''
+  });
 
-  const [gestiones, setGestiones] =
-    useState<GestionAcademica[]>([]);
+  useEffect(() => {
+    cargarDatos();
+  }, [filtros]);
 
-  const [institucionId, setInstitucionId] =
-    useState('');
-
-  const [gestionId, setGestionId] =
-    useState('');
-
-  const [trimestre, setTrimestre] =
-    useState<'all' | '1' | '2' | '3'>('all');
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState<string | null>(null);
-
-  const filtros = useMemo<ReporteFiltros>(() => {
-    return {
-      institucionId:
-        institucionId || undefined,
-
-      gestionId:
-        gestionId || undefined,
-
-      trimestre:
-        trimestre === 'all'
-          ? undefined
-          : Number(trimestre) as 1 | 2 | 3,
-    };
-  }, [
-    institucionId,
-    gestionId,
-    trimestre,
-  ]);
-
-  async function cargarCatalogos() {
+  const cargarDatos = async () => {
+    setLoading(true);
     try {
-      const [
-        institucionesResponse,
-        gestionesResponse,
-      ] = await Promise.all([
-        getInstituciones(),
-        getGestiones(),
-      ]);
-
-      setInstituciones(
-        institucionesResponse.data ?? [],
-      );
-
-      setGestiones(
-        gestionesResponse.data ?? [],
-      );
-    } catch (err) {
-      console.error(
-        'Error cargando catálogos de reportes:',
-        err,
-      );
-    }
-  }
-
-  async function cargarReportes() {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // const data = await getReportes(filtros);
-
-      // setReportes(data);
-    } catch (err) {
-      console.error(
-        'Error cargando reportes:',
-        err,
-      );
-
-      setError(
-        'No se pudieron cargar los datos del reporte.',
-      );
+      const resultado = await fetchReporteData(filtros);
+      setData(resultado);
+    } catch (error) {
+      console.error('Error cargando reportes', error);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  useEffect(() => {
-    void cargarCatalogos();
-  }, []);
+  const handleExportarPDF = () => {
+    if (!data) return;
+    const doc = new jsPDF();
 
-  useEffect(() => {
-    void cargarReportes();
-  }, [filtros]);
+    // Título y Cabecera
+    doc.setFontSize(18);
+    doc.text('Reporte Gerencial - EduMóvil', 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Fecha de emisión: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`Módulo: ${activeTab}`, 14, 36);
 
-  function limpiarFiltros() {
-    setInstitucionId('');
-    setGestionId('');
-    setTrimestre('all');
-  }
+    let startY = 45;
 
-  function exportarTodo() {
-    if (!reportes) return;
+    // Tabla 1: Resumen
+    autoTable(doc, {
+      startY,
+      head: [['Indicador', 'Valor']],
+      body: [
+        ['Total Estudiantes', data.resumen.totalEstudiantes],
+        ['Instituciones Activas', data.resumen.institucionesActivas],
+        ['Ingresos Totales (Bs)', data.resumen.ingresosPagos.toFixed(2)],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [37, 99, 235] }
+    });
 
-    const rows = [
-      {
-        indicador: 'Total estudiantes',
-        valor: reportes.resumen.totalEstudiantes,
-      },
-      {
-        indicador: 'Instituciones activas',
-        valor: reportes.resumen.institucionesActivas,
-      },
-      {
-        indicador: 'Total instituciones',
-        valor: reportes.resumen.totalInstituciones,
-      },
-      {
-        indicador: 'Promedio aprobación',
-        valor: `${reportes.resumen.promedioAprobacion}%`,
-      },
-      {
-        indicador: 'Importaciones',
-        valor: reportes.resumen.totalImportaciones,
-      },
-    ];
+    // Tabla 2: Detalle (Previsualización)
+    doc.text('Detalle Analítico', 14, (doc as any).lastAutoTable.finalY + 15);
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 20,
+      head: [['Colegio', 'Entidad / Materia', 'Métrica', 'Estado']],
+      body: data.tablaDetalle.map(item => [
+        item.colegio, item.entidad, item.metrica, item.estado
+      ]),
+      theme: 'striped',
+    });
 
-    downloadCsv(
-      'edumovil-reporte-resumen.csv',
-      rows,
-    );
-  }
-
-  function exportarRendimiento() {
-    if (!reportes) return;
-
-    downloadCsv(
-      'edumovil-rendimiento.csv',
-      reportes.rendimiento.map(item => ({
-        materia: item.subject,
-        aprobados: item.aprobados,
-        reprobados: item.reprobados,
-        pendientes: item.pendientes,
-        total: item.total,
-        porcentaje_aprobacion:
-          `${item.porcentajeAprobacion}%`,
-      })),
-    );
-  }
-
-  function exportarInstituciones() {
-    if (!reportes) return;
-
-    downloadCsv(
-      'edumovil-estudiantes-institucion.csv',
-      reportes.instituciones.map(item => ({
-        institucion: item.name,
-        estudiantes: item.value,
-      })),
-    );
-  }
-
-  function exportarInscripciones() {
-    if (!reportes) return;
-
-    downloadCsv(
-      'edumovil-inscripciones.csv',
-      reportes.inscripciones.map(item => ({
-        gestion: item.gestion,
-        estudiantes: item.estudiantes,
-      })),
-    );
-  }
-
-  const enrollmentChartData =
-    reportes?.inscripciones ?? [];
-
-  const performanceChartData =
-    reportes?.rendimiento ?? [];
-
-  const institutionPieData =
-    reportes?.instituciones ?? [];
+    doc.save(`Reporte_EduMovil_${activeTab}_${new Date().getTime()}.pdf`);
+  };
 
   return (
-    <div className="space-y-6 max-w-screen-2xl">
-
-      <PageHeader
-        title="Reportes"
-        description="Estadísticas y análisis del sistema EduMovil"
-        actions={
-          <div className="flex items-center gap-3">
-            <button
-              className="btn-secondary"
-              onClick={limpiarFiltros}
-              type="button"
-            >
-              <Filter size={16} />
-              Limpiar filtros
-            </button>
-
-            <button
-              className="btn-primary"
-              onClick={exportarTodo}
-              disabled={!reportes || loading}
-              type="button"
-            >
-              <Download size={16} />
-              Exportar resumen
-            </button>
-          </div>
-        }
-      />
-
-      {/* Filters */}
-
-      <div className="card p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="section-title">
-              Filtros del reporte
-            </h3>
-
-            <p className="text-xs text-slate-400 mt-1">
-              Los indicadores y gráficos se recalculan
-              con los datos actuales.
-            </p>
-          </div>
-
-          <button
-            className="btn-ghost"
-            onClick={cargarReportes}
-            disabled={loading}
-            type="button"
-            title="Actualizar"
-          >
-            <RefreshCw
-              size={15}
-              className={
-                loading
-                  ? 'animate-spin'
-                  : ''
-              }
-            />
+    <div className="p-6 bg-slate-50 min-h-screen">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Centro de Reportes</h1>
+          <p className="text-slate-500 text-sm">Análisis y exportación de datos en tiempo real</p>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={() => window.print()} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-md font-medium hover:bg-slate-300 transition">
+            Imprimir
+          </button>
+          <button onClick={handleExportarPDF} className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition shadow-sm flex items-center gap-2">
+            📄 Descargar PDF Formal
           </button>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
-              Institución
-            </label>
-
-            <select
-              value={institucionId}
-              onChange={event =>
-                setInstitucionId(event.target.value)
-              }
-              className="input w-full"
-            >
-              <option value="">
-                Todas las instituciones
-              </option>
-
-              {instituciones.map(institucion => (
-                <option
-                  key={institucion.id}
-                  value={institucion.id}
-                >
-                  {institucion.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
-              Gestión académica
-            </label>
-
-            <select
-              value={gestionId}
-              onChange={event =>
-                setGestionId(event.target.value)
-              }
-              className="input w-full"
-            >
-              <option value="">
-                Todas las gestiones
-              </option>
-
-              {gestiones.map(gestion => (
-                <option
-                  key={gestion.id}
-                  value={gestion.id}
-                >
-                  {gestion.nombre ||
-                    `Gestión ${gestion.anio}`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
-              Trimestre
-            </label>
-
-            <select
-              value={trimestre}
-              onChange={event =>
-                setTrimestre(
-                  event.target.value as
-                    | 'all'
-                    | '1'
-                    | '2'
-                    | '3',
-                )
-              }
-              className="input w-full"
-            >
-              <option value="all">
-                Todos los trimestres
-              </option>
-
-              <option value="1">
-                Primer trimestre
-              </option>
-
-              <option value="2">
-                Segundo trimestre
-              </option>
-
-              <option value="3">
-                Tercer trimestre
-              </option>
-            </select>
-          </div>
-
-        </div>
       </div>
 
-      {/* Error */}
-
-      {error && (
-        <div className="card p-4 border border-red-200 bg-red-50">
-          <p className="text-sm text-red-600">
-            {error}
-          </p>
+      {/* Barra de Filtros */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6 flex gap-4 items-end">
+        <div className="flex-1">
+          <label className="block text-xs font-semibold text-slate-600 mb-1">Desde</label>
+          <input type="date" className="w-full border rounded-md p-2 text-sm"
+            value={filtros.fechaInicio} onChange={e => setFiltros({ ...filtros, fechaInicio: e.target.value })} />
         </div>
-      )}
+        <div className="flex-1">
+          <label className="block text-xs font-semibold text-slate-600 mb-1">Hasta</label>
+          <input type="date" className="w-full border rounded-md p-2 text-sm"
+            value={filtros.fechaFin} onChange={e => setFiltros({ ...filtros, fechaFin: e.target.value })} />
+        </div>
+        <button onClick={cargarDatos} className="px-6 py-2 bg-slate-800 text-white rounded-md text-sm font-bold hover:bg-slate-900 transition">
+          Aplicar Filtros
+        </button>
+      </div>
 
-      {/* Summary cards */}
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-        {[
-          {
-            icon: <Users size={20} />,
-            label: 'Total estudiantes',
-            value:
-              reportes?.resumen.totalEstudiantes
-                .toLocaleString('es-BO') ?? '—',
-            trend: 'Estudiantes activos',
-            color: '#1B6FFF',
-            bg: 'rgba(27,111,255,0.1)',
-          },
-
-          {
-            icon: <Building2 size={20} />,
-            label: 'Instituciones activas',
-            value:
-              reportes
-                ? String(
-                    reportes.resumen
-                      .institucionesActivas,
-                  )
-                : '—',
-            trend:
-              reportes
-                ? `De ${reportes.resumen.totalInstituciones} registradas`
-                : 'Cargando...',
-            color: '#00C8FF',
-            bg: 'rgba(0,200,255,0.1)',
-          },
-
-          {
-            icon: <BarChart3 size={20} />,
-            label: 'Promedio aprobación',
-            value:
-              reportes
-                ? `${reportes.resumen.promedioAprobacion}%`
-                : '—',
-            trend:
-              trimestre === 'all'
-                ? 'Todos los trimestres'
-                : `Trimestre ${trimestre}`,
-            color: '#10b981',
-            bg: 'rgba(16,185,129,0.1)',
-          },
-
-          {
-            icon: <TrendingUp size={20} />,
-            label: 'Importaciones',
-            value:
-              reportes
-                ? String(
-                    reportes.resumen
-                      .totalImportaciones,
-                  )
-                : '—',
-            trend: 'Historial temporal',
-            color: '#FF5C1A',
-            bg: 'rgba(255,92,26,0.1)',
-          },
-        ].map(card => (
-          <div
-            key={card.label}
-            className="metric-card"
-          >
-            <div className="flex items-start justify-between">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{
-                  background: card.bg,
-                  color: card.color,
-                }}
-              >
-                {card.icon}
-              </div>
-            </div>
-
-            <div className="mt-3">
-              <p
-                className="text-2xl font-bold text-slate-800"
-                style={{
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {loading
-                  ? '...'
-                  : card.value}
-              </p>
-
-              <p className="text-sm text-slate-500 mt-0.5">
-                {card.label}
-              </p>
-
-              <p className="text-xs text-slate-400 mt-0.5">
-                {card.trend}
-              </p>
-            </div>
-          </div>
+      {/* Pestañas de Navegación */}
+      <div className="flex border-b border-slate-200 mb-6 gap-6">
+        {['GENERAL', 'ACADEMICO', 'PAGOS'].map(tab => (
+          <button key={tab} onClick={() => { setActiveTab(tab as any); setFiltros({ ...filtros, modulo: tab as any }); }}
+            className={`pb-3 font-semibold text-sm transition-colors ${activeTab === tab ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
+            {tab === 'GENERAL' ? 'Dashboard Global' : tab === 'ACADEMICO' ? 'Rendimiento Académico' : 'Estado de Pagos'}
+          </button>
         ))}
-
       </div>
 
-      {/* Charts */}
+      {loading || !data ? (
+        <div className="flex justify-center items-center py-20 text-slate-400 font-medium">Procesando millones de registros...</div>
+      ) : (
+        <div className="space-y-6">
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        {/* Inscripciones */}
-
-        <div className="card p-5">
-
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="section-title">
-                Estudiantes por gestión
-              </h3>
-
-              <p className="text-xs text-slate-400 mt-1">
-                Distribución de estudiantes según
-                su gestión académica.
-              </p>
+          {/* Tarjetas KPI */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
+              <p className="text-xs text-slate-500 font-bold uppercase">Total Estudiantes</p>
+              <p className="text-2xl font-black text-slate-800">{data.resumen.totalEstudiantes}</p>
             </div>
-
-            <button
-              className="btn-ghost text-xs flex items-center gap-1"
-              onClick={exportarInscripciones}
-              disabled={
-                enrollmentChartData.length === 0
-              }
-              type="button"
-            >
-              <Download size={13} />
-              Exportar
-            </button>
+            <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-emerald-500">
+              <p className="text-xs text-slate-500 font-bold uppercase">Instituciones Activas</p>
+              <p className="text-2xl font-black text-slate-800">{data.resumen.institucionesActivas}</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-500">
+              <p className="text-xs text-slate-500 font-bold uppercase">Total Docentes</p>
+              <p className="text-2xl font-black text-slate-800">{data.resumen.totalDocentes}</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-amber-500">
+              <p className="text-xs text-slate-500 font-bold uppercase">Ingresos Recaudados</p>
+              <p className="text-2xl font-black text-slate-800">Bs. {data.resumen.ingresosPagos.toLocaleString()}</p>
+            </div>
           </div>
 
-          <ResponsiveContainer
-            width="100%"
-            height={220}
-          >
-            <LineChart
-              data={enrollmentChartData}
-            >
-              <XAxis
-                dataKey="gestion"
-                tick={{
-                  fontSize: 12,
-                  fill: '#94a3b8',
-                }}
-                axisLine={false}
-                tickLine={false}
-              />
-
-              <YAxis
-                tick={{
-                  fontSize: 12,
-                  fill: '#94a3b8',
-                }}
-                axisLine={false}
-                tickLine={false}
-              />
-
-              <Tooltip
-                contentStyle={{
-                  borderRadius: 10,
-                  border:
-                    '1px solid #e2e8f0',
-                  fontSize: 12,
-                }}
-              />
-
-              <Line
-                type="monotone"
-                dataKey="estudiantes"
-                name="Estudiantes"
-                stroke="#1B6FFF"
-                strokeWidth={2.5}
-                dot
-              />
-            </LineChart>
-          </ResponsiveContainer>
-
-          {!loading &&
-            enrollmentChartData.length === 0 && (
-              <p className="text-center text-xs text-slate-400 py-8">
-                No hay datos de estudiantes
-                para los filtros seleccionados.
-              </p>
-            )}
-
-        </div>
-
-        {/* Rendimiento */}
-
-        <div className="card p-5">
-
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="section-title">
-                Rendimiento por materia
-              </h3>
-
-              <p className="text-xs text-slate-400 mt-1">
-                Comparación entre aprobados,
-                reprobados y pendientes.
-              </p>
-            </div>
-
-            <button
-              className="btn-ghost text-xs flex items-center gap-1"
-              onClick={exportarRendimiento}
-              disabled={
-                performanceChartData.length === 0
-              }
-              type="button"
-            >
-              <Download size={13} />
-              Exportar
-            </button>
-          </div>
-
-          <ResponsiveContainer
-            width="100%"
-            height={220}
-          >
-            <BarChart
-              data={performanceChartData}
-              barSize={12}
-            >
-              <XAxis
-                dataKey="subject"
-                tick={{
-                  fontSize: 11,
-                  fill: '#94a3b8',
-                }}
-                axisLine={false}
-                tickLine={false}
-              />
-
-              <YAxis
-                tick={{
-                  fontSize: 11,
-                  fill: '#94a3b8',
-                }}
-                axisLine={false}
-                tickLine={false}
-              />
-
-              <Tooltip
-                contentStyle={{
-                  borderRadius: 10,
-                  border:
-                    '1px solid #e2e8f0',
-                  fontSize: 12,
-                }}
-              />
-
-              <Legend
-                iconType="circle"
-                iconSize={8}
-                wrapperStyle={{
-                  fontSize: 12,
-                }}
-              />
-
-              <Bar
-                dataKey="aprobados"
-                name="Aprobados"
-                fill="#1B6FFF"
-                radius={[
-                  3,
-                  3,
-                  0,
-                  0,
-                ]}
-              />
-
-              <Bar
-                dataKey="reprobados"
-                name="Reprobados"
-                fill="#FF5C1A"
-                radius={[
-                  3,
-                  3,
-                  0,
-                  0,
-                ]}
-              />
-
-              <Bar
-                dataKey="pendientes"
-                name="Pendientes"
-                fill="#94a3b8"
-                radius={[
-                  3,
-                  3,
-                  0,
-                  0,
-                ]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-
-          {!loading &&
-            performanceChartData.length === 0 && (
-              <p className="text-center text-xs text-slate-400 py-8">
-                No hay notas para los filtros
-                seleccionados.
-              </p>
-            )}
-
-        </div>
-      </div>
-
-      {/* Institution distribution + import history */}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Institutions */}
-
-        <div className="card p-5">
-
-          <div className="flex items-center justify-between mb-4">
-
-            <div>
-              <h3 className="section-title">
-                Estudiantes por institución
-              </h3>
-
-              <p className="text-xs text-slate-400 mt-1">
-                Distribución actual.
-              </p>
-            </div>
-
-            <button
-              className="btn-ghost text-xs"
-              onClick={exportarInstituciones}
-              disabled={
-                institutionPieData.length === 0
-              }
-              type="button"
-              title="Exportar"
-            >
-              <Download size={13} />
-            </button>
-
-          </div>
-
-          <ResponsiveContainer
-            width="100%"
-            height={180}
-          >
-            <PieChart>
-              <Pie
-                data={institutionPieData}
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={80}
-                paddingAngle={3}
-                dataKey="value"
-              >
-                {institutionPieData.map(
-                  (entry, index) => (
-                    <Cell
-                      key={`${entry.name}-${index}`}
-                      fill={entry.color}
-                    />
-                  ),
-                )}
-              </Pie>
-
-              <Tooltip
-                formatter={(value) => [
-                  `${value} estudiantes`,
-                  'Cantidad',
-                ]}
-                contentStyle={{
-                  borderRadius: 10,
-                  border:
-                    '1px solid #e2e8f0',
-                  fontSize: 12,
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-
-          <div className="space-y-2 mt-2">
-
-            {institutionPieData.map(item => (
-              <div
-                key={item.name}
-                className="flex items-center justify-between text-xs"
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{
-                      background:
-                        item.color,
-                    }}
-                  />
-
-                  <span className="text-slate-600 truncate max-w-32">
-                    {item.name}
-                  </span>
-                </div>
-
-                <span className="font-semibold text-slate-700">
-                  {item.value}
-                </span>
+          {/* Gráficos */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+              <h3 className="text-sm font-bold text-slate-700 mb-4">Rendimiento por Materia (Aprobados vs Reprobados)</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.rendimientoAcademico}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="materia" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="aprobados" name="Aprobados" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="reprobados" name="Reprobados" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-            ))}
-
-          </div>
-
-          {!loading &&
-            institutionPieData.length === 0 && (
-              <p className="text-center text-xs text-slate-400 py-4">
-                No hay datos disponibles.
-              </p>
-            )}
-
-        </div>
-
-        {/* Import history */}
-
-        <div className="card p-5 lg:col-span-2">
-
-          <div className="flex items-center justify-between mb-4">
-
-            <div>
-              <h3 className="section-title">
-                Historial de importaciones
-              </h3>
-
-              <p className="text-xs text-slate-400 mt-1">
-                Historial temporal mientras se
-                implementa el módulo de importaciones
-                en backend.
-              </p>
             </div>
 
-            <button
-              className="btn-ghost text-xs flex items-center gap-1"
-              type="button"
-              onClick={() => 
-                {
-                // if (!reportes) return;
-
-                // downloadCsv(
-                //   'edumovil-importaciones.csv',
-                //   reportes.importaciones.map(
-                //     item => ({
-                //       archivo: item.archivo,
-                //       tipo: item.tipo,
-                //       creados: item.creados,
-                //       errores: item.errores,
-                //       fecha: item.fecha,
-                //       estado: item.estado,
-                //     }),
-                //   ),
-                // );
-
-              }
-            
-            }
-            >
-              <Download size={13} />
-              Exportar
-            </button>
-
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+              <h3 className="text-sm font-bold text-slate-700 mb-4">Mora de Pagos por Mes</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.estadoPagos}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="pagados" name="Pagado al día" fill="#3b82f6" stackId="a" />
+                    <Bar dataKey="pendientes" name="En Mora" fill="#f59e0b" stackId="a" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-
-            <table className="data-table">
-
+          {/* Tabla de Previsualización */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 bg-slate-50">
+              <h3 className="text-sm font-bold text-slate-700">Previsualización de Datos Crudos (Para PDF)</h3>
+            </div>
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr>
-                  <th>Archivo</th>
-                  <th>Tipo</th>
-                  <th>Creados</th>
-                  <th>Errores</th>
-                  <th>Fecha</th>
-                  <th>Estado</th>
+                <tr className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider border-b">
+                  <th className="p-3 font-semibold">Colegio</th>
+                  <th className="p-3 font-semibold">Entidad / Rubro</th>
+                  <th className="p-3 font-semibold">Métrica</th>
+                  <th className="p-3 font-semibold">Estado</th>
                 </tr>
               </thead>
-
-              <tbody>
-
-                {/* {reportes?.importaciones.map(
-                  imp => (
-                    <tr key={imp.id}>
-
-                      <td>
-                        <span className="text-xs font-medium text-slate-700 max-w-40 truncate block">
-                          {imp.archivo}
-                        </span>
-                      </td>
-
-                      <td>
-                        <Badge variant="blue">
-                          {imp.tipo}
-                        </Badge>
-                      </td>
-
-                      <td>
-                        <span className="font-semibold text-emerald-600">
-                          {imp.creados}
-                        </span>
-                      </td>
-
-                      <td>
-                        <span
-                          className={
-                            imp.errores > 0
-                              ? 'font-semibold text-red-500'
-                              : 'text-slate-400'
-                          }
-                        >
-                          {imp.errores}
-                        </span>
-                      </td>
-
-                      <td className="text-xs text-slate-500">
-                        {new Date(
-                          imp.fecha,
-                        ).toLocaleDateString(
-                          'es-BO',
-                        )}
-                      </td>
-
-                      <td>
-                        <Badge
-                          variant={
-                            ESTADO_COLORS[
-                              imp.estado
-                            ]
-                          }
-                        >
-                          {imp.estado}
-                        </Badge>
-                      </td>
-
-                    </tr>
-                  ),
-                )} */}
-
+              <tbody className="text-sm text-slate-700 divide-y divide-slate-100">
+                {data.tablaDetalle.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50 transition">
+                    <td className="p-3 font-medium">{row.colegio}</td>
+                    <td className="p-3">{row.entidad}</td>
+                    <td className="p-3 font-mono text-xs">{row.metrica}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${row.estado === 'Óptimo' ? 'bg-green-100 text-green-700' :
+                          row.estado === 'Alerta' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                        }`}>{row.estado}</span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
-
             </table>
-
           </div>
 
         </div>
-
-      </div>
-
-      <p className="text-xs text-center text-slate-400 pb-2">
-        Los indicadores académicos se calculan
-        directamente a partir de los datos disponibles
-        en el backend de EduMovil.
-      </p>
-
+      )}
     </div>
   );
 }

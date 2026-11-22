@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Edit2, PowerOff, Power, Eye } from 'lucide-react';
+import { Edit2, PowerOff, Power, Eye, Trash2, X } from 'lucide-react';
 import { CrudPage } from '../../components/ui/CrudPage';
 import { StatusBadge } from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
@@ -11,6 +11,7 @@ import { getGestiones } from '../../api/gestiones.api';
 import { getProfesores } from '../../api/profesores.api';
 import { useToast } from '../../hooks/useToast';
 import type { Curso, GestionAcademica, Profesor, UnidadEducativa } from '../../types';
+import { apiRequest } from '../../api/client';
 
 const EMPTY = {
   nombre: '',
@@ -91,6 +92,26 @@ export default function Cursos() {
       profesor.unidadEducativaId === form.unidadEducativaId
     );
   });
+
+  const [confirmDelete, setConfirmDelete] = useState<any>(null);
+
+  const handleDeleteDefinitivo = async () => {
+    if (!confirmDelete) return;
+
+    try {
+      await apiRequest(`/cursos/${confirmDelete.id}`, {
+        method: 'DELETE'
+      });
+
+      toast('Curso eliminado correctamente', 'success');
+      setRefresh(r => r + 1);
+    } catch (error) {
+      console.error(error);
+      toast('Error al eliminar el curso', 'error');
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
 
   const handleSave = async () => {
     if (
@@ -290,6 +311,13 @@ try {
                     onClick: () => setConfirmToggle(r),
                     variant: r.activo ? 'danger' : 'default',
                   },
+                  {
+                    // NUEVO BOTÓN
+                    label: 'Eliminar',
+                    icon: <Trash2 size={14} />,
+                    onClick: () => setConfirmDelete(r),
+                    variant: 'danger',
+                  },
                 ]}
               />
             ),
@@ -457,12 +485,13 @@ try {
               }
               disabled={loadingOptions || !form.unidadEducativaId}
             >
+              {/* <option value="" disabled>Seleccionar gestión...</option> */}
               {gestionesFiltradas.map(gestion => (
                 <option
                   key={gestion.id}
                   value={gestion.id}
                 >
-                  {gestion.nombre}
+                  {gestion.nombre || `Gestión ${gestion.anio}`} {gestion.unidadEducativa?.nombre ? `- ${gestion.unidadEducativa.nombre}` : ''}
                 </option>
               ))}
             </Select>
@@ -527,6 +556,31 @@ try {
         message={`¿Cambiar estado de "${confirmToggle?.nombre} ${confirmToggle?.paralelo}"?`}
         confirmLabel="Confirmar"
       />
+      
+      {/* MODAL: CONFIRMAR ELIMINACIÓN DEFINITIVA */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">¿Eliminar Curso?</h3>
+              <p className="text-slate-600 text-sm">
+                Estás a punto de eliminar definitivamente el curso <strong>{confirmDelete.nombre} {confirmDelete.paralelo}</strong>. Esta acción no se puede deshacer.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 p-4 bg-slate-50 border-t border-slate-200">
+              <button onClick={() => setConfirmDelete(null)} className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 font-medium transition">
+                Cancelar
+              </button>
+              <button onClick={handleDeleteDefinitivo} className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-sm transition flex items-center gap-2">
+                <Trash2 size={16} /> Sí, Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

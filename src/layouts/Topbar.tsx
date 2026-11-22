@@ -23,11 +23,13 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/reportes': 'Reportes',
   '/admin/usuarios': 'Usuarios Web',
   '/admin/importacion': 'Importación Masiva',
+  '/admin/pagos': 'Pagos y Suscripciones',
   '/encuestador': 'Mi Dashboard',
   '/encuestador/institucion': 'Institución Asignada',
   '/encuestador/estudiantes': 'Estudiantes',
   '/encuestador/cursos': 'Cursos y Paralelos',
   '/encuestador/importacion': 'Importación Masiva',
+  '/encuestador/pagos': 'Pagos y Suscripciones',
   '/encuestador/perfil': 'Mi Perfil',
 };
 

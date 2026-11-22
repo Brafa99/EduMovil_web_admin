@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { AuthUser, UserRole } from '../types';
 import { login as apiLogin, logout as apiLogout } from '../api/auth.api';
+import { apiRequest } from '../api/client';
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -34,18 +35,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
+  // Reemplaza solo la función login por esta:
   const login = async (codigo: string, password: string) => {
     const response = await apiLogin({ codigo, password });
+
+    // Buscamos el UUID real en la BD de Supabase según el username/codigo
+    let realUserId = response.user.id;
+    try {
+      const res = await apiRequest<any>('/usuarios', { method: 'GET' });
+      const lista = Array.isArray(res) ? res : (res?.data ?? []);
+      const encontrado = lista.find(
+        (u: any) =>
+          u.username?.toLowerCase() === codigo.toLowerCase() ||
+          u.email?.toLowerCase() === codigo.toLowerCase()
+      );
+      if (encontrado?.id) {
+        realUserId = encontrado.id;
+      }
+    } catch (e) {
+      console.warn('No se pudo sincronizar el UUID real desde /usuarios', e);
+    }
+
+    const userActualizado = { ...response.user, id: realUserId };
+
     localStorage.setItem('edumovil_token', response.accessToken);
-    localStorage.setItem('edumovil_user', JSON.stringify(response.user));
+    localStorage.setItem('edumovil_user', JSON.stringify(userActualizado));
+    localStorage.setItem('usuarioId', realUserId); // 👈 Misma llave que usa Subtemas.tsx
+
     setToken(response.accessToken);
-    setUser(response.user);
+    setUser(userActualizado);
   };
 
   const logout = async () => {
-    await apiLogout().catch(() => {});
+    await apiLogout().catch(() => { });
     localStorage.removeItem('edumovil_token');
     localStorage.removeItem('edumovil_user');
+
+    localStorage.removeItem('usuarioId');
+
     setToken(null);
     setUser(null);
   };

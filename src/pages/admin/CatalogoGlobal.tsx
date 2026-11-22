@@ -4,11 +4,11 @@ import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import { FormField, Input, Select } from '../../components/ui/FormField';
 import { StatusBadge } from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
-import { Edit2, Power, PowerOff, ListTree } from 'lucide-react';
+import { Edit2, Power, PowerOff, ListTree, Trash2, X } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
-// Ajusta estas importaciones a tu api client
-import { getCatalogosMateria, createCatalogoMateria, updateCatalogoMateria } from '../../api/catalogo.api';
+
+import { getCatalogosMateria, createCatalogoMateria, updateCatalogoMateria, deleteCatalogoMateria } from '../../api/catalogo.api';
 import type { CatalogoMateria } from '../../types';
 
 const EMPTY = { nombre: '', descripcion: '', activo: true };
@@ -19,7 +19,22 @@ export default function CatalogoGlobal() {
   const [modal, setModal] = useState({ open: false, data: undefined as CatalogoMateria | undefined });
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<CatalogoMateria | null>(null);
 
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+
+    try {
+      await deleteCatalogoMateria(confirmDelete.id);
+      toast('Catálogo eliminado exitosamente', 'success');
+      setRefresh(r => r + 1);
+    } catch (error) {
+      console.error('Error eliminando catálogo:', error);
+      toast('Error al eliminar. Revisa si hay materias usándolo.', 'error');
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
   const handleSave = async () => {
     if (!form.nombre) {
       toast('El nombre del catálogo es requerido', 'error');
@@ -74,15 +89,25 @@ export default function CatalogoGlobal() {
             label: 'Gestión',
             render: r => (
               <div className="flex gap-2">
-                <button 
+                <button
                   className="btn-secondary text-xs flex items-center gap-1"
-                  onClick={() => toast('Aquí abriremos la vista de Temas', 'info')}
+                  onClick={() => window.location.href = `/admin/temas?catalogoId=${r.id}`}
                 >
                   <ListTree size={14} /> Ver Temas
                 </button>
                 <ActionsMenu
                   items={[
-                    { label: 'Editar', icon: <Edit2 size={14} />, onClick: () => { setForm({ nombre: r.nombre, descripcion: r.descripcion || '', activo: r.activo }); setModal({ open: true, data: r }); } },
+                    {
+                      label: 'Editar',
+                      icon: <Edit2 size={14} />,
+                      onClick: () => { setForm({ nombre: r.nombre, descripcion: r.descripcion || '', activo: r.activo }); setModal({ open: true, data: r }); }
+                    },
+                    {
+                      label: 'Eliminar',
+                      icon: <Trash2 size={14} />,
+                      onClick: () => setConfirmDelete(r),
+                      variant: 'danger',
+                    },
                   ]}
                 />
               </div>
@@ -90,6 +115,7 @@ export default function CatalogoGlobal() {
           },
         ]}
       />
+      
 
       <Modal
         open={modal.open}
@@ -114,6 +140,14 @@ export default function CatalogoGlobal() {
           </FormField>
         </div>
       </Modal>
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={handleDelete}
+        title="Eliminar Catálogo Base"
+        message={`¿Estás seguro de eliminar el catálogo "${confirmDelete?.nombre}"? Esta acción no se puede deshacer y puede afectar a los colegios que lo estén usando.`}
+        confirmLabel="Sí, eliminar"
+      />
     </>
   );
 }

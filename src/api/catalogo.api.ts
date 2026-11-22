@@ -18,6 +18,12 @@ export async function createCatalogoMateria(
   return response;
 }
 
+export async function deleteCatalogoMateria(id: string): Promise<void> {
+  await apiRequest(`/catalogo/materias/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function updateCatalogoMateria(
   id: string,
   data: Partial<CatalogoMateria>

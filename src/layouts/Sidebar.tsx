@@ -5,7 +5,9 @@ import {
   UserCog, BarChart3, Settings, ChevronLeft, ChevronRight,
   X, Signal, MapPin, ClipboardCheck, User, Globe,
   BookDashed,
-  BookAudio
+  BookAudio,
+  Handshake,
+  Wallet 
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 
@@ -19,21 +21,23 @@ interface SidebarProps {
 const ADMIN_NAV = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/admin' },
   { label: 'Instituciones', icon: Building2, to: '/admin/instituciones' },
+  { label: 'Patrocinadores', icon: Handshake, to: '/admin/patrocinadores' }, 
   { label: 'Gestiones Académicas', icon: CalendarDays, to: '/admin/gestiones' },
   { label: 'Cursos y Paralelos', icon: BookOpen, to: '/admin/cursos' },
   { label: 'Profesores', icon: Users, to: '/admin/profesores' },
   { label: 'Estudiantes', icon: GraduationCap, to: '/admin/estudiantes' },
+  { label: 'Padres y Tutores', icon: UserCheck, to: '/admin/padres' },
+  { label: 'Catálogo Base (IA)', icon: Globe, to: '/admin/catalogo' },
   { label: 'Materias', icon: FileText, to: '/admin/materias' },
   { label: 'Temas/Lecciones', icon: BookOpen, to: '/admin/temas' },
-  { label: 'Subtemas', icon: BookAudio, to: '/admin/subtemas' },
-  { label: 'Catálogo Base (IA)', icon: Globe, to: '/admin/catalogo' },
-  { label: 'Padres y Tutores', icon: UserCheck, to: '/admin/padres' },
+  { label: 'Subtemas (Juegos)', icon: BookAudio, to: '/admin/subtemas' },
   { label: 'Notas', icon: ClipboardList, to: '/admin/notas' },
   { label: 'Prácticas', icon: ClipboardCheck, to: '/admin/practicas' },
   { label: 'Importación Masiva', icon: Upload, to: '/admin/importacion' },
   { label: 'Usuarios Web', icon: UserCog, to: '/admin/usuarios' },
   { label: 'Reportes', icon: BarChart3, to: '/admin/reportes' },
-  { label: 'Configuración', icon: Settings, to: '/admin/configuracion' },
+  { label: 'Pagos y Suscripciones', icon: Wallet, to: '/admin/pagos' },
+  // { label: 'Configuración', icon: Settings, to: '/admin/configuracion' },
 ];
 
 const ENCUESTADOR_NAV = [
@@ -42,6 +46,7 @@ const ENCUESTADOR_NAV = [
   { label: 'Estudiantes', icon: GraduationCap, to: '/encuestador/estudiantes' },
   { label: 'Cursos y Paralelos', icon: BookOpen, to: '/encuestador/cursos' },
   { label: 'Importación Masiva', icon: Upload, to: '/encuestador/importacion' },
+  { label: 'Pagos y Suscripciones', icon: Wallet, to: '/admin/pagos' },
   { label: 'Mi Perfil', icon: User, to: '/encuestador/perfil' },
 ];
 

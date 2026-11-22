@@ -151,24 +151,26 @@ export interface CreatePadrePayload {
   direccion?: string;
   unidadEducativaId: string;
   activo: boolean;
+  estudianteId?: string; // <-- 1. AGREGAR ESTO AQUÍ
 }
 
 export async function createPadre(
   data: CreatePadrePayload
 ): Promise<Padre> {
 
- const payload = {
-  ci: data.ci.trim(),
-  nombres: data.nombres.trim(),
-  apellidos: data.apellidos.trim(),
-  parentesco: mapRelacionToBackend(data.relacion),
-  telefono: data.telefono?.trim() || undefined,
-  email: data.email?.trim() || undefined,
-  ocupacion: data.ocupacion?.trim() || undefined,
-  direccion: data.direccion?.trim() || undefined,
-  unidadEducativaId: data.unidadEducativaId,
-  activo: data.activo,
-};
+  const payload = {
+    ci: data.ci.trim(),
+    nombres: data.nombres.trim(),
+    apellidos: data.apellidos.trim(),
+    parentesco: mapRelacionToBackend(data.relacion),
+    telefono: data.telefono?.trim() || undefined,
+    email: data.email?.trim() || undefined,
+    ocupacion: data.ocupacion?.trim() || undefined,
+    direccion: data.direccion?.trim() || undefined,
+    unidadEducativaId: data.unidadEducativaId,
+    estudianteId: data.estudianteId, // <-- 2. Y ENVIARLO AQUÍ AL BACKEND
+    activo: data.activo,
+  };
 
   const response = await apiRequest<BackendPadre>(
     '/padres',
@@ -191,6 +193,29 @@ export interface UpdatePadrePayload {
   ocupacion?: string;
   direccion?: string;
   activo?: boolean;
+}
+
+export async function vincularPadreEstudiante(
+  estudianteId: string,
+  padreId: string,
+  esConvivente: boolean = true
+): Promise<void> {
+  await apiRequest(`/estudiantes/${estudianteId}/padres`, {
+    method: 'POST',
+    body: JSON.stringify({
+      padreId,
+      esConvivente,
+    }),
+  });
+}
+
+export async function desvincularPadreEstudiante(
+  estudianteId: string,
+  padreId: string
+): Promise<void> {
+  await apiRequest(`/estudiantes/${estudianteId}/padres/${padreId}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function updatePadre(
@@ -244,6 +269,8 @@ export async function updatePadre(
       body: JSON.stringify(payload),
     }
   );
+
+  
 
   return mapPadre(response);
 }

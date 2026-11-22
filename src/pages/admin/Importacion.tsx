@@ -150,6 +150,8 @@ export default function Importacion() {
   const [loading, setLoading] =
     useState(false);
 
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+
   const [errorFilter, setErrorFilter] =
     useState<'all' | ImportRowError['tipo']>(
       'all',
@@ -224,6 +226,8 @@ export default function Importacion() {
     const f = e.target.files?.[0];
 
     if (!f) return;
+
+    console.log("Archivo seleccionado:", f!);
 
     if (
       !/\.(xlsx|xls|csv)$/i.test(f.name)
@@ -398,59 +402,34 @@ export default function Importacion() {
 
     /*
      * PASO 4
-     *
-     * IMPORTACIÓN DEMO:
-     * todavía no toca PostgreSQL.
      */
     if (step === 4) {
-      if (!preview || !file) {
-        toast(
-          'No existe información para procesar',
-          'error',
-        );
+      // ¡ESTA LÍNEA ES LA SOLUCIÓN! Le decimos a TypeScript: si no hay archivo, detente.
+      if (!file) {
+        toast('No se encontró el archivo para importar', 'error');
         return;
       }
 
       setLoading(true);
-      setError('');
+      setImportProgress({ current: 0, total: 1 }); // Inicializa el progreso
 
       try {
-        const r =
-          await executeImport(
-            preview.rows,
-            mapping,
-            unidadEducativaId,
-            gestionId,
-            file.name,
-          );
-
-        setResult(r);
-
-        setImportedRows(
-          normalizeImportedRows(
-            preview.rows,
-            mapping,
-          ),
+        const result = await executeImport(
+          preview!.rows,
+          mapping,
+          unidadEducativaId,
+          gestionId,
+          file.name, // <-- ¡TypeScript ya no se quejará aquí porque arriba garantizamos que file existe!
+          (current, total) => setImportProgress({ current, total }) // Callback de UI
         );
 
+        const normalized = normalizeImportedRows(preview!.rows, mapping);
+
+        setResult(result);
+        setImportedRows(normalized);
         setStep(5);
-
-        toast(
-          'Datos preparados correctamente. Esta es una demo local.',
-          'success',
-        );
-      } catch (err) {
-        const message =
-          err instanceof Error
-            ? err.message
-            : 'Error durante la preparación';
-
-        setError(message);
-
-        toast(
-          message,
-          'error',
-        );
+      } catch (error) {
+        toast('Error al ejecutar la importación', 'error');
       } finally {
         setLoading(false);
       }
@@ -937,15 +916,6 @@ export default function Importacion() {
                 )}
               </div>
             </div>
-
-            <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-              <p className="text-sm text-blue-700">
-                <strong>Demo frontend:</strong>{' '}
-                el archivo se procesa localmente
-                en tu navegador. Todavía no se
-                guardan estudiantes en PostgreSQL.
-              </p>
-            </div>
           </div>
         )}
 
@@ -1271,23 +1241,6 @@ export default function Importacion() {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100">
-              <AlertCircle
-                size={18}
-                className="text-blue-500 shrink-0 mt-0.5"
-              />
-
-              <p className="text-sm text-blue-700">
-                <strong>
-                  Modo demo:
-                </strong>{' '}
-                al continuar, los registros se
-                normalizarán y quedarán disponibles
-                localmente para revisar el flujo.
-                Todavía no se crearán estudiantes
-                en la base de datos.
-              </p>
-            </div>
 
             {validation.invalidRows >
               0 && (
@@ -1306,6 +1259,26 @@ export default function Importacion() {
                 </p>
               </div>
             )}
+
+            {/* BARRA DE PROGRESO DE IMPORTACIÓN */}
+            {loading && importProgress.total > 0 && (
+              <div className="mt-6 p-5 bg-white border border-purple-100 rounded-xl shadow-sm">
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-sm font-bold text-slate-700">Subiendo a la base de datos...</p>
+                  <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded-md">
+                    {importProgress.current} de {importProgress.total}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-purple-600 h-3 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-slate-500 mt-2 text-center">Por favor, no cierres esta ventana.</p>
+              </div>
+            )}
+
           </div>
         )}
 
@@ -1341,7 +1314,7 @@ export default function Importacion() {
                 </h3>
 
                 <p className="text-sm text-slate-500 mt-0.5">
-                  Demo local ·{' '}
+
                   {new Date(
                     result.fecha,
                   ).toLocaleString(
@@ -1351,16 +1324,9 @@ export default function Importacion() {
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-              <p className="text-sm text-blue-700">
-                Los datos fueron procesados
-                localmente.{' '}
-                <strong>
-                  Todavía no se guardaron en PostgreSQL.
-                </strong>
-                {' '}
-                En la siguiente etapa este mismo
-                resultado podrá enviarse al backend.
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+              <p className="text-sm text-emerald-800">
+                <strong>¡Importación exitosa!</strong> Los estudiantes (y sus tutores vinculados) han sido guardados definitivamente en la base de datos.
               </p>
             </div>
 

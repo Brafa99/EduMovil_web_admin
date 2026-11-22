@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Edit2, PowerOff, Power, Globe } from 'lucide-react';
+import { Edit2, PowerOff, Power, Globe, Trash2, X } from 'lucide-react';
 import { CrudPage } from '../../components/ui/CrudPage';
 import { StatusBadge } from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
@@ -10,6 +10,7 @@ import {
   getMaterias,
   createMateria,
   updateMateria,
+  deleteMateria
 } from '../../api/materias.api';
 
 import { getCursos } from '../../api/cursos.api';
@@ -46,6 +47,23 @@ export default function Materias() {
 
   const [confirmToggle, setConfirmToggle] =
     useState<Materia | null>(null);
+  
+  const [confirmDelete, setConfirmDelete] = useState<Materia | null>(null);
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+
+    try {
+      await deleteMateria(confirmDelete.id);
+      toast('Materia eliminada exitosamente', 'success');
+      setRefresh(r => r + 1);
+    } catch (error) {
+      console.error('Error eliminando materia:', error);
+      toast('Error al eliminar la materia. Verifica que no tenga notas o estudiantes vinculados.', 'error');
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
 
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [profesores, setProfesores] = useState<Profesor[]>([]);
@@ -268,6 +286,12 @@ export default function Materias() {
                     onClick: () => setConfirmToggle(r),
                     variant: r.activo ? 'danger' : 'default',
                   },
+                  {
+                    label: 'Eliminar',
+                    icon: <Trash2 size={14} />,
+                    onClick: () => setConfirmDelete(r),
+                    variant: 'danger',
+                  },
                 ]}
               />
             ),
@@ -296,18 +320,26 @@ export default function Materias() {
             <strong>Paso clave:</strong> Vincular esta materia local con un Catálogo Global permite que los alumnos hereden automáticamente los temas, juegos y contenido generado por IA.
           </div>
 
-          <FormField label="Nombre de la materia local (Ej. Lenguaje)" required>
-            <Input
-              value={form.nombre}
-              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
-              placeholder="Ej: Lenguaje y Comunicación"
-            />
-          </FormField>
-
           <FormField label="Vincular a Catálogo Global (Contenido e IA)" required>
             <Select
               value={form.catalogoMateriaId}
-              onChange={e => setForm(f => ({ ...f, catalogoMateriaId: e.target.value }))}
+              onChange={e => {
+                const selectedCatalogoId = e.target.value;
+                const selectedCatalogo = catalogos.find(c => c.id === selectedCatalogoId);
+
+                setForm(f => {
+                  // Si el nombre local está vacío o era igual al nombre del catálogo anterior,
+                  // lo actualizamos automáticamente con el nombre del nuevo catálogo.
+                  const currentCatalogo = catalogos.find(c => c.id === f.catalogoMateriaId);
+                  const shouldUpdateName = !f.nombre || f.nombre === currentCatalogo?.nombre;
+
+                  return {
+                    ...f,
+                    catalogoMateriaId: selectedCatalogoId,
+                    nombre: shouldUpdateName && selectedCatalogo ? selectedCatalogo.nombre : f.nombre,
+                  };
+                });
+              }}
               placeholder={loadingOptions ? 'Cargando catálogos...' : 'Seleccionar catálogo base'}
               disabled={loadingOptions}
             >
@@ -318,6 +350,17 @@ export default function Materias() {
                 </option>
               ))}
             </Select>
+          </FormField>
+
+          <FormField label="Nombre de la materia local (Ej. Lenguaje)" required>
+            <Input
+              value={form.nombre}
+              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+              placeholder="Ej: Lenguaje y Comunicación"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Puedes modificar el nombre si en tu colegio se llama diferente al catálogo base.
+            </p>
           </FormField>
 
           <div className="grid grid-cols-2 gap-4">
@@ -363,6 +406,15 @@ export default function Materias() {
         title="Cambiar estado"
         message={`¿Cambiar estado de "${confirmToggle?.nombre || confirmToggle?.nombre}"?`}
         confirmLabel="Confirmar"
+      />
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={handleDelete}
+        title="Eliminar materia"
+        message={`¿Estás seguro de eliminar definitivamente la materia "${confirmDelete?.nombre || confirmDelete?.nombre}"? Esta acción no se puede deshacer y puede afectar las notas y juegos asociados.`}
+        confirmLabel="Sí, eliminar"
       />
     </>
   );

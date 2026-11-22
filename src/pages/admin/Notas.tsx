@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Trash2 } from 'lucide-react';
 import { CrudPage } from '../../components/ui/CrudPage';
 import { Badge } from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
-import { Modal } from '../../components/ui/Modal';
+import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import {
   FormField,
   Input,
@@ -14,6 +14,7 @@ import {
   getNotas,
   createNota,
   updateNota,
+  deleteNota
 } from '../../api/notas.api';
 
 import { getEstudiantes } from '../../api/estudiantes.api';
@@ -62,6 +63,26 @@ export default function Notas() {
   const [form, setForm] = useState<NotaForm>(EMPTY);
 
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Nota | null>(null);
+  const [searchEstudiante, setSearchEstudiante] = useState('');
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    try {
+      await deleteNota(confirmDelete.id);const openCreate = () => {
+    setForm(EMPTY);
+    setSearchEstudiante(''); // <-- NUEVO
+    setModal({ open: true });
+  };
+      toast('Registro eliminado exitosamente', 'success');
+      setRefresh(r => r + 1);
+    } catch (error) {
+      console.error('Error eliminando:', error);
+      toast('Error al eliminar el registro', 'error');
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
 
   const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
   const [materias, setMaterias] = useState<Materia[]>([]);
@@ -236,17 +257,12 @@ export default function Notas() {
      */
     const payload = {
       notaNumeral: form.puntaje,
-      trimestre:
-        form.trimestre === 1
-          ? ('T1' as const)
-          : form.trimestre === 2
-            ? ('T2' as const)
-            : ('T3' as const),
-      observaciones:
-        form.observacion.trim() || null,
+      trimestre: form.trimestre === 1 ? ('T1' as const) : form.trimestre === 2 ? ('T2' as const) : ('T3' as const),
+      observaciones: form.observacion.trim() || null,
       materiaId: form.materiaId,
       estudianteId: form.estudianteId,
       cursoId,
+      unidadEducativaId: estudiante?.unidadEducativaId, // <-- ¡ESTO FALTABA Y CAUSABA EL ERROR!
     };
 
     setSaving(true);
@@ -295,9 +311,8 @@ export default function Notas() {
 
   const openCreate = () => {
     setForm(EMPTY);
-    setModal({
-      open: true,
-    });
+    setSearchEstudiante('');
+    setModal({ open: true });
   };
 
   const openEdit = (nota: Nota) => {
@@ -368,116 +383,69 @@ export default function Notas() {
   return (
     <>
       <CrudPage<Nota>
-        title="Notas"
-        description="Registro de calificaciones por trimestre"
+        title="Reporte de Rendimiento (Puntos Extra)"
+        description="Visualiza los puntos ganados en juegos y misiones de IA. Úsalos como referencia para dar puntos extra en clase."
         refreshTrigger={refresh}
-        fetchData={() =>
-          getNotas().then(
-            response => response,
-          )
-        }
+        fetchData={() => getNotas().then(response => response)}
         keyExtractor={row => row.id}
         onAdd={openCreate}
-        addLabel="Registrar nota"
+        addLabel="Registrar Puntos"
         columns={[
           {
             key: 'estudiante',
             label: 'Estudiante',
-            render: row => (
-              <span className="font-semibold text-sm text-slate-700">
-                {getNombreEstudiante(row)}
-              </span>
-            ),
+            render: row => <span className="font-semibold text-sm text-slate-700">{getNombreEstudiante(row)}</span>,
           },
-
           {
             key: 'materia',
             label: 'Materia',
-            render: row => (
-              <span>
-                {getNombreMateria(row)}
-              </span>
-            ),
+            render: row => <span>{getNombreMateria(row)}</span>,
           },
-
           {
             key: 'trimestre',
             label: 'Trimestre',
-            render: row => (
-              <span className="font-mono text-sm">
-                {row.trimestre}°
-              </span>
-            ),
+            render: row => <span className="font-mono text-sm text-slate-500">{row.trimestre}° Trim.</span>,
           },
-
           {
             key: 'puntaje',
-            label: 'Puntaje',
+            label: 'Puntos de Juego',
             render: row => (
-              <span
-                className="font-bold text-lg"
-                style={{
-                  color:
-                    row.puntaje >= 51
-                      ? '#10b981'
-                      : '#ef4444',
-                }}
-              >
-                {row.puntaje}
+              <span className="font-bold text-lg" style={{ color: row.puntaje >= 51 ? '#8b5cf6' : '#f97316' }}>
+                {row.puntaje} XP
               </span>
             ),
           },
-
-/*
-
-Aquí se está dejando con estado Aprobado / Reprobado directo con "51" pero faltaría obtener el estado por si se quiere colcoar "pendiente" y jalar del campo "estado" 
-
-*/
-
           {
             key: 'estado',
-            label: 'Estado',
+            label: 'Nivel',
             render: row => (
-              <Badge
-                variant={
-                  row.puntaje>=51
-                  ? 'green'
-                  : 'red'
-                }
-              >
-                {
-                row.puntaje>=51
-                ?'Aprobado'
-                :'Reprobado'
-                  .charAt(0)
-                  .toUpperCase() +
-                  row.estado.slice(1)
-                  }
+              <Badge variant={row.puntaje >= 51 ? 'green' : 'orange'}>
+                {row.puntaje >= 51 ? 'Logrado 🏆' : 'En Proceso 🏃'}
               </Badge>
             ),
           },
-
           {
             key: 'actions',
             label: '',
             render: row => (
               <ActionsMenu
                 items={[
-                  {
-                    label: 'Editar',
-                    icon: (
-                      <Edit2 size={14} />
-                    ),
-                    onClick: () =>
-                      openEdit(row),
-                  },
+                  { label: 'Editar', icon: <Edit2 size={14} />, onClick: () => openEdit(row) },
+                  { label: 'Eliminar', icon: <Trash2 size={14} />, onClick: () => setConfirmDelete(row), variant: 'danger' },
                 ]}
               />
             ),
           },
         ]}
       />
-
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={handleDelete}
+        title="Eliminar Reporte"
+        message={`¿Estás seguro de eliminar este reporte de rendimiento?`}
+        confirmLabel="Sí, eliminar"
+      />
       <Modal
         open={modal.open}
         onClose={() =>
@@ -520,52 +488,34 @@ Aquí se está dejando con estado Aprobado / Reprobado directo con "51" pero fal
         }
       >
         <div className="space-y-4">
-          <FormField
-            label="Estudiante"
-            required
-          >
+          <FormField label="Buscar y Seleccionar Estudiante" required>
+            <Input
+              placeholder="🔍 Escribir nombre, apellido o CI para filtrar..."
+              value={searchEstudiante}
+              onChange={e => setSearchEstudiante(e.target.value)}
+              className="mb-2 text-sm"
+              disabled={saving}
+            />
             <Select
-              value={
-                form.estudianteId
-              }
-              onChange={event =>
-                handleEstudianteChange(
-                  event.target.value,
-                )
-              }
-              placeholder={
-                loadingOptions
-                  ? 'Cargando estudiantes...'
-                  : 'Seleccionar estudiante'
-              }
-              disabled={
-                loadingOptions ||
-                saving
-              }
+              value={form.estudianteId}
+              onChange={event => handleEstudianteChange(event.target.value)}
+              disabled={loadingOptions || saving}
             >
+              <option value="" disabled>Seleccione de la lista filtrada...</option>
               {estudiantes
-                .filter(
-                  estudiante =>
-                    estudiante.activo,
-                )
+                .filter(e => e.activo)
+                .filter(e => {
+                  if (!searchEstudiante) return true;
+                  const term = searchEstudiante.toLowerCase();
+                  return (
+                    e.nombres.toLowerCase().includes(term) ||
+                    e.apellidos.toLowerCase().includes(term) ||
+                    (e.ci && e.ci.toLowerCase().includes(term))
+                  );
+                })
                 .map(estudiante => (
-                  <option
-                    key={
-                      estudiante.id
-                    }
-                    value={
-                      estudiante.id
-                    }
-                  >
-                    {
-                      estudiante.nombres
-                    }{' '}
-                    {
-                      estudiante.apellidos
-                    }
-                    {estudiante.ci
-                      ? ` — CI: ${estudiante.ci}`
-                      : ''}
+                  <option key={estudiante.id} value={estudiante.id}>
+                    {estudiante.nombres} {estudiante.apellidos} {estudiante.ci ? ` — CI: ${estudiante.ci}` : ''}
                   </option>
                 ))}
             </Select>
@@ -617,47 +567,19 @@ Aquí se está dejando con estado Aprobado / Reprobado directo con "51" pero fal
               </Select>
             </FormField>
 
-            <FormField
-              label="Gestión"
-              required
-            >
+            <FormField label="Gestión (Año Académico)" required>
               <Select
-                value={
-                  form.gestionId
-                }
-                onChange={event =>
-                  setForm(current => ({
-                    ...current,
-                    gestionId:
-                      event.target
-                        .value,
-                  }))
-                }
-                placeholder={
-                  loadingOptions
-                    ? 'Cargando gestiones...'
-                    : 'Seleccionar gestión'
-                }
-                disabled={
-                  loadingOptions ||
-                  saving
-                }
+                value={form.gestionId}
+                onChange={event => setForm(current => ({ ...current, gestionId: event.target.value }))}
+                placeholder={loadingOptions ? 'Cargando gestiones...' : 'Seleccionar gestión'}
+                disabled={loadingOptions || saving}
               >
-                {gestiones.map(
-                  gestion => (
-                    <option
-                      key={
-                        gestion.id
-                      }
-                      value={
-                        gestion.id
-                      }
-                    >
-                      {gestion.nombre ||
-                        `Gestión ${gestion.anio}`}
-                    </option>
-                  ),
-                )}
+                {/* <option value="" disabled>Seleccionar gestión...</option> */}
+                {gestiones.map(gestion => (
+                  <option key={gestion.id} value={gestion.id}>
+                    {gestion.nombre || `Gestión ${gestion.anio}`} {gestion.unidadEducativa?.nombre ? ` - ${gestion.unidadEducativa.nombre}` : ''}
+                  </option>
+                ))}
               </Select>
             </FormField>
           </div>
@@ -781,6 +703,7 @@ Aquí se está dejando con estado Aprobado / Reprobado directo con "51" pero fal
           </FormField>
         </div>
       </Modal>
+      
     </>
   );
 }

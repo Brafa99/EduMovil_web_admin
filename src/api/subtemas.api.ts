@@ -30,3 +30,9 @@ export async function updateSubtema(id: string, data: Partial<Subtema>): Promise
     body: JSON.stringify(data),
   });
 }
+
+export async function deleteSubtema(id: string): Promise<void> {
+  await apiRequest<void>(`/catalogo/subtemas/${id}`, {
+    method: 'DELETE',
+  });
+}

@@ -208,11 +208,18 @@ export async function createPractica(
   return mapPractica(response);
 }
 
+export async function deletePractica(id: string): Promise<void> {
+  await apiRequest<void>(`/practicas/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function updatePractica(
   id: string,
   data: Partial<CreatePracticaPayload>,
 ): Promise<Practica> {
   
+
 
   const payload = {
     ...(data.titulo !== undefined && {

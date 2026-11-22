@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Edit2, PowerOff, Power } from 'lucide-react';
+import { Edit2, PowerOff, Power, Trash2, X } from 'lucide-react';
 import { CrudPage } from '../../components/ui/CrudPage';
 import { StatusBadge } from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import { FormField, Input, Select } from '../../components/ui/FormField';
+import { apiRequest } from '../../api/client';
 import {
   getProfesores,
   createProfesor,
@@ -49,6 +50,27 @@ export default function Profesores() {
 
   const [loadingInstituciones, setLoadingInstituciones] =
     useState(true);
+
+  const [confirmDelete, setConfirmDelete] = useState<any>(null);
+
+  const handleDeleteDefinitivo = async () => {
+    if (!confirmDelete) return;
+
+    try {
+      // Usamos el ID (UUID real) del profesor para la URL del backend
+      await apiRequest(`/profesores/${confirmDelete.id}`, {
+        method: 'DELETE'
+      });
+
+      toast('Docente eliminado correctamente', 'success');
+      setRefresh(r => r + 1);
+    } catch (error) {
+      console.error(error);
+      toast('Error al eliminar al docente', 'error');
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -240,21 +262,21 @@ const handleSave = async () => {
                   },
 
                   {
-                    label: r.activo
-                      ? 'Desactivar'
-                      : 'Activar',
+                    label: r.activo ? 'Desactivar' : 'Activar',
                     icon: r.activo ? (
-                      <PowerOff
-                        size={14}
-                      />
+                      <PowerOff size={14} />
                     ) : (
                       <Power size={14} />
                     ),
-                    onClick: () =>
-                      setConfirmToggle(r),
-                    variant: r.activo
-                      ? 'danger'
-                      : 'default',
+                    onClick: () => setConfirmToggle(r),
+                    variant: r.activo ? 'danger' : 'default',
+                  },
+                  {
+                    // NUEVO BOTÓN: ELIMINAR
+                    label: 'Eliminar',
+                    icon: <Trash2 size={14} />,
+                    onClick: () => setConfirmDelete(r),
+                    variant: 'danger',
                   },
                 ]}
               />
@@ -442,10 +464,9 @@ const handleSave = async () => {
 
           try {
             await updateProfesor(
-              confirmToggle.profesorCi,
+              confirmToggle.id,
               {
-                activo:
-                  !confirmToggle.activo,
+                activo: !confirmToggle.activo,
               },
             );
 
@@ -475,6 +496,31 @@ const handleSave = async () => {
         message={`¿Cambiar estado de ${confirmToggle?.nombres} ${confirmToggle?.apellidos}?`}
         confirmLabel="Confirmar"
       />
+
+      {/* MODAL: CONFIRMAR ELIMINACIÓN DEFINITIVA */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">¿Eliminar Docente?</h3>
+              <p className="text-slate-600 text-sm">
+                Estás a punto de eliminar definitivamente al docente <strong>{confirmDelete.nombres} {confirmDelete.apellidos}</strong> (CI: {confirmDelete.profesorCi}). Esta acción no se puede deshacer.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 p-4 bg-slate-50 border-t border-slate-200">
+              <button onClick={() => setConfirmDelete(null)} className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 font-medium transition">
+                Cancelar
+              </button>
+              <button onClick={handleDeleteDefinitivo} className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-sm transition flex items-center gap-2">
+                <Trash2 size={16} /> Sí, Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Edit2, PowerOff, Power, ListTree, Sparkles } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Edit2, PowerOff, Power, ListTree, Sparkles, Trash2, X, Search} from 'lucide-react';
 
 import { CrudPage } from '../../components/ui/CrudPage';
 import { StatusBadge } from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import { FormField, Input, Select } from '../../components/ui/FormField';
-
 import { getTemas, createTema, updateTema, deleteTema, type Tema } from '../../api/temas.api';
 import { getCatalogosMateria } from '../../api/catalogo.api';
 import { useToast } from '../../hooks/useToast';
@@ -26,22 +25,41 @@ export default function Temas() {
   const [refresh, setRefresh] = useState(0);
   const [catalogos, setCatalogos] = useState<CatalogoMateria[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedCatalogoId, setSelectedCatalogoId] = useState('');
+  const [selectedCatalogoId, setSelectedCatalogoId] = useState(() => {
+    return new URLSearchParams(window.location.search).get('catalogoId') || '';
+  });
+  const selectedCatalogoIdRef = useRef(selectedCatalogoId);
+  const [catalogoSearch, setCatalogoSearch] = useState('');
+  const [catalogoMenuOpen, setCatalogoMenuOpen] = useState(false);
 
+  const catalogosFiltrados = catalogos.filter((c) =>
+    c.nombre.toLowerCase().includes(catalogoSearch.toLowerCase().trim()),
+  );
+
+  useEffect(() => {
+    selectedCatalogoIdRef.current = selectedCatalogoId;
+    setRefresh((r) => r + 1);
+  }, [selectedCatalogoId]);
   const [modal, setModal] = useState<{ open: boolean; data?: Tema }>({ open: false });
   const [form, setForm] = useState<typeof EMPTY>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [confirmToggle, setConfirmToggle] = useState<Tema | null>(null);
+  
 
   useEffect(() => {
     const loadCatalogos = async () => {
       setLoading(true);
       try {
         const res = await getCatalogosMateria();
-        setCatalogos(res.data || []);
-        if (res.data && res.data.length > 0) {
-          setSelectedCatalogoId(res.data[0].id);
+        const lista = res.data || [];
+        setCatalogos(lista);
+
+        const urlCatId = new URLSearchParams(window.location.search).get('catalogoId');
+        if (urlCatId) {
+          const encontrado = lista.find((c) => c.id === urlCatId);
+          if (encontrado) setCatalogoSearch(encontrado.nombre);
         }
+
       } catch (error) {
         console.error('Error cargando catálogos:', error);
         toast('No se pudieron cargar los catálogos base', 'error');
@@ -70,6 +88,23 @@ export default function Temas() {
       catalogoMateriaId: tema.catalogoMateriaId,
     });
     setModal({ open: true, data: tema });
+  };
+
+  const [confirmDelete, setConfirmDelete] = useState<Tema | null>(null);
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+
+    try {
+      await deleteTema(confirmDelete.id);
+      toast('Tema eliminado exitosamente', 'success');
+      setRefresh(r => r + 1);
+    } catch (error) {
+      console.error('Error eliminando tema:', error);
+      toast('Error al eliminar. Revisa si hay subtemas vinculados a este tema.', 'error');
+    } finally {
+      setConfirmDelete(null);
+    }
   };
 
   const handleSave = async () => {
@@ -106,14 +141,22 @@ export default function Temas() {
     }
   };
 
-  const fetchTemas = async () => {
-    if (!selectedCatalogoId) return { data: [], total: 0 };
+  const fetchTemas = async (params?: any) => {
     try {
-      // El endpoint recibe el ID del catálogo base para traer solo sus temas
-      const res = await getTemas(selectedCatalogoId); 
-      // Como res ya es un arreglo de temas, lo asignamos directamente:
-      const temas = Array.isArray(res) ? res : ([] as Tema[]);
-      return { data: temas, total: temas.length };
+      const res = await getTemas(selectedCatalogoIdRef.current || undefined);
+      const lista = Array.isArray(res) ? res : ([] as Tema[]);
+
+      const normalize = (str?: string | null) =>
+        (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+      const rawSearch = typeof params === 'string' ? params : params?.search || '';
+      const term = normalize(rawSearch);
+      if (!term) return { data: lista, total: lista.length };
+
+      const filtered = lista.filter(
+        (t) => normalize(t.nombre).includes(term) || normalize(t.descripcion).includes(term),
+      );
+      return { data: filtered, total: filtered.length };
     } catch (err) {
       return { data: [], total: 0 };
     }
@@ -133,17 +176,82 @@ export default function Temas() {
                 Estos temas estarán disponibles para todos los colegios que usen el catálogo base.
               </p>
             </div>
-            <Select
-              value={selectedCatalogoId}
-              onChange={e => { setSelectedCatalogoId(e.target.value); setRefresh(r => r + 1); }}
-              disabled={loading}
-              placeholder={loading ? 'Cargando catálogos...' : 'Seleccionar catálogo base'}
-            >
-              <option value="" disabled>Selecciona un Catálogo Base...</option>
-              {catalogos.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-              ))}
-            </Select>
+            <div className="relative max-w-md">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Filtrar por catálogo base (opcional)
+              </label>
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                />
+                <input
+                  type="text"
+                  value={catalogoSearch}
+                  disabled={loading}
+                  onFocus={() => setCatalogoMenuOpen(true)}
+                  onBlur={() => setTimeout(() => setCatalogoMenuOpen(false), 150)}
+                  onChange={(e) => {
+                    setCatalogoSearch(e.target.value);
+                    setCatalogoMenuOpen(true);
+                    if (!e.target.value.trim()) setSelectedCatalogoId('');
+                  }}
+                  placeholder={loading ? 'Cargando catálogos...' : 'Todos los catálogos (escribe para buscar...)'}
+                  className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                />
+                {(catalogoSearch || selectedCatalogoId) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCatalogoSearch('');
+                      setSelectedCatalogoId('');
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    title="Mostrar todos los catálogos"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+
+              {catalogoMenuOpen && (
+                <ul className="absolute z-30 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg text-sm">
+                  <li
+                    onMouseDown={() => {
+                      setSelectedCatalogoId('');
+                      setCatalogoSearch('');
+                      setCatalogoMenuOpen(false);
+                    }}
+                    className={`px-3 py-2 cursor-pointer hover:bg-purple-50 border-b border-gray-100 ${!selectedCatalogoId
+                        ? 'bg-purple-100 font-semibold text-purple-800'
+                        : 'text-gray-600'
+                      }`}
+                  >
+                    — Todos los catálogos —
+                  </li>
+                  {catalogosFiltrados.length === 0 ? (
+                    <li className="px-3 py-2 text-gray-400">No se encontró ningún catálogo</li>
+                  ) : (
+                    catalogosFiltrados.map((cat) => (
+                      <li
+                        key={cat.id}
+                        onMouseDown={() => {
+                          setSelectedCatalogoId(cat.id);
+                          setCatalogoSearch(cat.nombre);
+                          setCatalogoMenuOpen(false);
+                        }}
+                        className={`px-3 py-2 cursor-pointer hover:bg-purple-50 ${selectedCatalogoId === cat.id
+                            ? 'bg-purple-100 font-semibold text-purple-800'
+                            : 'text-gray-700'
+                          }`}
+                      >
+                        {cat.nombre}
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
 
@@ -188,6 +296,12 @@ export default function Temas() {
                         onClick: () => setConfirmToggle(tema),
                         variant: tema.activo ? 'danger' : 'default',
                       },
+                      {
+                        label: 'Eliminar',
+                        icon: <Trash2 size={14} />,
+                        onClick: () => setConfirmDelete(tema),
+                        variant: 'danger',
+                      },
                     ]}
                   />
                 </div>
@@ -206,6 +320,14 @@ export default function Temas() {
       </Modal>
 
       <ConfirmDialog open={!!confirmToggle} onClose={() => setConfirmToggle(null)} onConfirm={handleToggle} title="Cambiar estado" message={`¿Cambiar estado de "${confirmToggle?.nombre}"?`} confirmLabel="Confirmar" />
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={handleDelete}
+        title="Eliminar Tema"
+        message={`¿Estás seguro de eliminar el tema "${confirmDelete?.nombre}"?`}
+        confirmLabel="Sí, eliminar"
+      />
     </>
   );
 }

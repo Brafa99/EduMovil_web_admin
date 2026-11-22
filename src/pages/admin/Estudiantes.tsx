@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Edit2, PowerOff, Power, Eye, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import { Edit2, PowerOff, Power, Eye, Upload, CheckCircle, AlertCircle, Trash2, X, Crown, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { CrudPage } from '../../components/ui/CrudPage';
 import { Badge, StatusBadge} from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import { FormField, Input, Select } from '../../components/ui/FormField';
+import { apiRequest } from '../../api/client';
 import {
   getEstudiantes,
   createEstudiante,
@@ -76,6 +77,8 @@ export default function Estudiantes() {
   const [loadingOptions, setLoadingOptions] =
     useState(true);
 
+  const [detailModalItem, setDetailModalItem] = useState<any>(null);
+
   useEffect(() => {
     let mounted = true;
 
@@ -118,6 +121,33 @@ export default function Estudiantes() {
       mounted = false;
     };
   }, [toast]);
+
+  const [confirmDelete, setConfirmDelete] = useState<any>(null);
+
+  const handleDeleteDefinitivo = async () => {
+    if (!confirmDelete) return;
+
+    try {
+      // Usamos el UUID real del estudiante para eliminarlo de la BD
+      await apiRequest(`/estudiantes/${confirmDelete.id}`, {
+        method: 'DELETE'
+      });
+
+      setStatusDialog({
+        type: 'success',
+        message: 'Estudiante eliminado correctamente del sistema.',
+      });
+      setRefresh(r => r + 1);
+    } catch (error) {
+      console.error(error);
+      setStatusDialog({
+        type: 'error',
+        message: 'Error al eliminar al estudiante. Verifica que no tenga notas o pagos asociados.',
+      });
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
 
   const handleCambiarEstado = async () => {
   if (!confirmToggle) return;
@@ -253,6 +283,43 @@ if (
     return true;
   });
 
+  const extraerTutores = (est: any) => {
+    if (Array.isArray(est?.padres) && est.padres.length > 0) {
+      return est.padres.map((item: any) => {
+        const p = item?.padre ?? item;
+        return {
+          id: p?.id || item?.padreId,
+          nombres: p?.nombres || '',
+          apellidos: p?.apellidos || '',
+          ci: p?.ci || '',
+          telefono: p?.telefono || '',
+          parentesco: p?.parentesco || p?.relacion || 'TUTOR',
+          esConvivente: Boolean(item?.esConvivente ?? p?.esConvivente),
+        };
+      });
+    }
+    if (est?.padre) {
+      return [
+        {
+          id: est.padre.id,
+          nombres: est.padre.nombres || '',
+          apellidos: est.padre.apellidos || '',
+          ci: est.padre.ci || '',
+          telefono: est.padre.telefono || '',
+          parentesco: est.padre.parentesco || est.padre.relacion || 'TUTOR',
+          esConvivente: true,
+        },
+      ];
+    }
+    return [];
+  };
+
+  const esPlusVigente = (est: any) => {
+    if (!est?.esPlus) return false;
+    if (!est?.plusHasta) return true;
+    return new Date(est.plusHasta) > new Date();
+  };
+
   const gestionesFiltradas = gestiones.filter(g => {
     if (
       !form.unidadEducativaId
@@ -376,18 +443,56 @@ if (
           {
             key: 'padre',
             label: 'Tutor',
-            render: r => (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-50 text-slate-400">
-                No disponible
-              </span>
-            ),
+            render: r => {
+              const tutores = extraerTutores(r);
+              if (tutores.length > 0) {
+                return (
+                  <div className="flex flex-col gap-1">
+                    {tutores.map((t: any, idx: number) => (
+                      <span
+                        key={t.id || idx}
+                        className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap w-fit"
+                      >
+                        {t.nombres} {t.apellidos} ({String(t.parentesco).toUpperCase()})
+                      </span>
+                    ))}
+                  </div>
+                );
+              }
+              return (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-50 text-slate-400">
+                  Sin asignar
+                </span>
+              );
+            },
+          },
+          {
+            key: 'plan',
+            label: 'Plan App',
+            render: (r: any) => {
+              const plus = esPlusVigente(r);
+              return plus ? (
+                <div className="flex flex-col">
+                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 w-fit">
+                    <Crown size={12} className="text-amber-600" /> PLUS
+                  </span>
+                  {r.plusHasta && (
+                    <span className="text-[10px] text-slate-400 mt-0.5">
+                      Hasta {new Date(r.plusHasta).toLocaleDateString('es-BO')}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                  Gratis (Demo)
+                </span>
+              );
+            },
           },
           {
             key: 'activo',
-            label: 'Estado',
-            render: r => (
-              <StatusBadge activo={r.activo} />
-            ),
+            label: 'Cuenta',
+            render: r => <StatusBadge activo={r.activo} />,
           },
           {
             key: 'actions',
@@ -396,15 +501,11 @@ if (
               <ActionsMenu
                 items={[
                
-               /*   
-               
-               {
-                    label: 'Ver detalle',
+                  {
+                    label: 'Ver Ficha',
                     icon: <Eye size={14} />,
-                    onClick: () => {},
+                    onClick: () => setDetailModalItem(r),
                   },
-
-               */
 
                   {
                     label: 'Editar',
@@ -436,16 +537,28 @@ if (
                       });
                     },
                   },
-                 {
-  label: r.activo ? 'Bloquear' : 'Activar',
-  icon: r.activo ? (
-    <PowerOff size={14} />
-  ) : (
-    <Power size={14} />
-  ),
-  onClick: () => setConfirmToggle(r),
-  variant: r.activo ? 'danger' : 'default',
-},
+                  {
+                    label: 'Gestionar Pago / Plus',
+                    icon: <CreditCard size={14} />,
+                    onClick: () => navigate('/admin/pagos'),
+                  },
+                  {
+                    label: r.activo ? 'Bloquear' : 'Activar',
+                    icon: r.activo ? (
+                      <PowerOff size={14} />
+                    ) : (
+                      <Power size={14} />
+                    ),
+                    onClick: () => setConfirmToggle(r),
+                    variant: r.activo ? 'danger' : 'default',
+                  },
+                  {
+                    // NUEVO BOTÓN: ELIMINAR
+                    label: 'Eliminar',
+                    icon: <Trash2 size={14} />,
+                    onClick: () => setConfirmDelete(r),
+                    variant: 'danger',
+                  },
                 ]}
               />
             ),
@@ -622,24 +735,19 @@ if (
                 onChange={e =>
                   setForm(f => ({
                     ...f,
-                    gestionId:
-                      e.target.value,
+                    gestionId: e.target.value,
                     cursoActualId: '',
                   }))
                 }
                 placeholder="Seleccionar gestión"
                 disabled={loadingOptions}
               >
-                {gestionesFiltradas.map(
-                  g => (
-                    <option
-                      key={g.id}
-                      value={g.id}
-                    >
-                      {g.nombre}
-                    </option>
-                  )
-                )}
+                <option value="" disabled>Seleccionar gestión...</option>
+                {gestionesFiltradas.map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.nombre || `Gestión ${g.anio}`} {g.unidadEducativa?.nombre ? `- ${g.unidadEducativa.nombre}` : ''}
+                  </option>
+                ))}
               </Select>
             </FormField>
 
@@ -761,6 +869,183 @@ if (
     </div>
   </div>
 )}
+
+
+      {/* MODAL: CONFIRMAR ELIMINACIÓN DEFINITIVA */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">¿Eliminar Estudiante?</h3>
+              <p className="text-gray-600 text-sm">
+                Estás a punto de eliminar definitivamente a <strong>{confirmDelete.nombres} {confirmDelete.apellidos}</strong> (CI: {confirmDelete.ci}). Se perderá su acceso y registro en el curso. Esta acción no se puede deshacer.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 p-4 bg-gray-50 border-t border-gray-200">
+              <button onClick={() => setConfirmDelete(null)} className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+                Cancelar
+              </button>
+              <button onClick={handleDeleteDefinitivo} className="rounded-lg bg-red-600 hover:bg-red-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition flex items-center gap-2">
+                <Trash2 size={16} /> Sí, Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    {/* MODAL: VER FICHA DEL ESTUDIANTE (PERFIL) */}
+      {detailModalItem && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+
+            {/* Cabecera / Portada */}
+            <div className="relative h-24 bg-gradient-to-r from-blue-600 to-indigo-700">
+              <div className="absolute top-4 right-4 flex gap-2">
+                <span className={`px-2 py-1 rounded text-xs font-bold shadow-sm ${detailModalItem.activo ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                  {detailModalItem.activo ? 'ACTIVO' : 'BLOQUEADO'}
+                </span>
+                <button onClick={() => setDetailModalItem(null)} className="bg-black/20 hover:bg-black/40 text-white rounded-full p-1 backdrop-blur-md transition">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Cuerpo del Perfil */}
+            <div className="px-6 pb-6 relative">
+              {/* Foto de Perfil (Avatar) */}
+              <div className="relative -mt-12 mb-4 flex justify-between items-end">
+                <div className="w-24 h-24 rounded-full border-4 border-white bg-slate-100 shadow-md flex items-center justify-center overflow-hidden">
+                  {/* Aquí validaremos en el futuro: detailModalItem.foto_perfil_url */}
+                  {detailModalItem.foto_perfil_url ? (
+                    <img src={detailModalItem.foto_perfil_url} alt="Perfil" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-3xl font-bold text-slate-400">
+                      {detailModalItem.nombres.charAt(0)}{detailModalItem.apellidos.charAt(0)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Etiqueta real de Suscripción PLUS / Gratis */}
+                <div className="mb-2">
+                  {esPlusVigente(detailModalItem) ? (
+                    <span className="bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                      <Crown size={13} className="text-amber-600" />
+                      PLUS Activo
+                      {detailModalItem.plusHasta
+                        ? ` · Hasta ${new Date(detailModalItem.plusHasta).toLocaleDateString('es-BO')}`
+                        : ''}
+                    </span>
+                  ) : (
+                    <span className="bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                      Plan Gratis (Solo Demo)
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Info Personal */}
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-slate-800 leading-tight">
+                  {detailModalItem.nombres} {detailModalItem.apellidos}
+                </h3>
+                <p className="text-sm font-medium text-blue-600">
+                  CI: {detailModalItem.ci} | {detailModalItem.genero === 'M' ? 'Masculino' : 'Femenino'}
+                </p>
+              </div>
+
+              {/* Datos Académicos */}
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-3">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-2">Información Académica</h4>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-slate-500 text-xs">Institución</p>
+                    <p className="font-semibold text-slate-700">
+                      {detailModalItem.unidadEducativa?.nombre ??
+                        instituciones.find(i => i.id === detailModalItem.unidadEducativaId)?.nombre ??
+                        'No asignada'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">Curso</p>
+                    <p className="font-semibold text-slate-700">
+                      {(() => {
+                        const curso = cursos.find(c => c.id === detailModalItem.cursoActualId);
+                        if (!curso) return 'Sin asignar';
+
+                        const nombreIncluyeParalelo = curso.paralelo && curso.nombre.trim().toLowerCase().endsWith(curso.paralelo.trim().toLowerCase());
+
+                        return nombreIncluyeParalelo
+                          ? curso.nombre
+                          : `${curso.nombre} — Paralelo ${curso.paralelo || ''}`;
+                      })()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">Fecha de Nacimiento</p>
+                    <p className="font-medium text-slate-700">
+                      {detailModalItem.fechaNacimiento ? new Date(detailModalItem.fechaNacimiento).toLocaleDateString('es-BO', { timeZone: 'UTC' }) : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">Gestión</p>
+                    <p className="font-medium text-slate-700">
+                      {detailModalItem.gestion?.nombre
+                        ? `${detailModalItem.gestion.nombre} ${detailModalItem.gestion.unidadEducativa?.nombre ? `- ${detailModalItem.gestion.unidadEducativa.nombre}` : ''}`
+                        : (detailModalItem.gestionId ? 'Asignada' : '—')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Información de Tutores */}
+              <div className="flex flex-col gap-2">
+                {(() => {
+                  const tutores = extraerTutores(detailModalItem);
+                  if (tutores.length === 0) {
+                    return (
+                      <p className="text-sm text-slate-500 italic">
+                        No hay tutores asignados para este estudiante.
+                      </p>
+                    );
+                  }
+                  return tutores.map((tutor: any, idx: number) => (
+                    <div
+                      key={tutor.id || idx}
+                      className="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                          {tutor.nombres} {tutor.apellidos}
+                          {tutor.esConvivente && (
+                            <span
+                              className="bg-green-100 text-green-700 text-[10px] px-1.5 py-0.5 rounded-full"
+                              title="Vive con el estudiante"
+                            >
+                              🏠
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          CI: {tutor.ci || 'N/A'} | Cel: {tutor.telefono || '—'}
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded uppercase">
+                        {tutor.parentesco}
+                      </span>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </>   
   );
 }

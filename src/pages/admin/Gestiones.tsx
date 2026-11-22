@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Edit2, PowerOff, Power } from 'lucide-react';
+import { Edit2, PowerOff, Power, Trash2, X } from 'lucide-react';
 import { CrudPage } from '../../components/ui/CrudPage';
 import { StatusBadge } from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
+import { apiRequest } from '../../api/client';
 import {
   FormField,
   Input,
@@ -22,6 +23,7 @@ import type {
 } from '../../types';
 
 const CURRENT_YEAR = new Date().getFullYear();
+const API_BASE = import.meta.env.VITE_API_URL || 'https://backend-edumovil.onrender.com/api/v1';
 
 const EMPTY = {
   anio: CURRENT_YEAR,
@@ -89,6 +91,27 @@ export default function Gestiones() {
       mounted = false;
     };
   }, [toast]);
+
+  const [confirmDelete, setConfirmDelete] = useState<any>(null);
+
+  const handleDeleteDefinitivo = async () => {
+    if (!confirmDelete) return;
+
+    try {
+      // Como usamos tu apiRequest, el X-Usuario-Id se envía solo por detrás mágico
+      await apiRequest(`/gestiones/${confirmDelete.id}`, {
+        method: 'DELETE'
+      });
+
+      toast('Gestión eliminada correctamente', 'success');
+      setRefresh(r => r + 1); // Recarga la tabla al instante
+    } catch (error) {
+      console.error(error);
+      toast('Error al eliminar la gestión', 'error');
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
 
   const handleSave = async () => {
     if (
@@ -253,19 +276,21 @@ export default function Gestiones() {
                     },
                   },
                   {
-                    label: r.activo
-                      ? 'Desactivar'
-                      : 'Activar',
+                    label: r.activo ? 'Desactivar' : 'Activar',
                     icon: r.activo ? (
                       <PowerOff size={14} />
                     ) : (
                       <Power size={14} />
                     ),
-                    onClick: () =>
-                      setConfirmToggle(r),
-                    variant: r.activo
-                      ? 'danger'
-                      : 'default',
+                    onClick: () => setConfirmToggle(r),
+                    variant: r.activo ? 'danger' : 'default',
+                  },
+                  {
+                    // NUEVO BOTÓN
+                    label: 'Eliminar',
+                    icon: <Trash2 size={14} />,
+                    onClick: () => setConfirmDelete(r),
+                    variant: 'danger',
                   },
                 ]}
               />
@@ -458,6 +483,31 @@ export default function Gestiones() {
         } "${confirmToggle?.nombre}"?`}
         confirmLabel="Confirmar"
       />
+
+      {/* MODAL: CONFIRMAR ELIMINACIÓN DEFINITIVA */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">¿Eliminar Gestión?</h3>
+              <p className="text-slate-600 text-sm">
+                Estás a punto de eliminar definitivamente la <strong>{confirmDelete.nombre}</strong>. Esta acción no se puede deshacer.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 p-4 bg-slate-50 border-t border-slate-200">
+              <button onClick={() => setConfirmDelete(null)} className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 font-medium transition">
+                Cancelar
+              </button>
+              <button onClick={handleDeleteDefinitivo} className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-sm transition flex items-center gap-2">
+                <Trash2 size={16} /> Sí, Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

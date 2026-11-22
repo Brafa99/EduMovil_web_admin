@@ -37,11 +37,32 @@ interface BackendEstudiante {
     createdAt: string;
     updatedAt: string;
   } | null;
+  padres?: {
+    esConvivente: boolean;
+    padre: {
+      id: string;
+      ci: string;
+      nombres: string;
+      apellidos: string;
+      telefono?: string;
+      parentesco: string;
+    }
+  }[];
 }
 
-function mapEstudiante(
-  item: BackendEstudiante
-): Estudiante {
+function mapEstudiante(item: BackendEstudiante): Estudiante {
+  // 1. Extraemos y limpiamos a los tutores de la tabla intermedia
+  const padresMapeados =
+    item.padres?.map(p => ({
+      id: p.padre.id,
+      ci: p.padre.ci,
+      nombres: p.padre.nombres,
+      apellidos: p.padre.apellidos,
+      telefono: p.padre.telefono,
+      relacion: p.padre.parentesco.toLowerCase(),
+      esConvivente: p.esConvivente,
+    })) || [];
+
   return {
     id: item.id,
     ci: item.ci ?? '',
@@ -49,26 +70,15 @@ function mapEstudiante(
     apellidos: item.apellidos,
     codigoRude: item.codigoRude ?? undefined,
     fechaNacimiento: item.fechaNacimiento ?? '',
-    genero:
-      item.genero === 'F'
-        ? 'F'
-        : item.genero === 'M'
-          ? 'M'
-          : undefined,
-
-    cursoActualId:
-      item.cursoActualId ?? undefined,
-
-    paralelo:
-      item.cursoActual?.paralelo ?? undefined,
-
-    unidadEducativaId:
-  item.cursoActual?.unidadEducativaId ??
-  item.unidadEducativaId,
-
-    gestionId:
-      item.cursoActual?.gestionId ?? '',
-
+    genero: item.genero === 'F' ? 'F' : item.genero === 'M' ? 'M' : undefined,
+    cursoActualId: item.cursoActualId ?? undefined,
+    paralelo: item.cursoActual?.paralelo ?? undefined,
+    unidadEducativaId: item.cursoActual?.unidadEducativaId ?? item.unidadEducativaId,
+    gestionId: item.cursoActual?.gestionId ?? '',
+    esPlus: Boolean((item as any).esPlus),
+    plusHasta: (item as any).plusHasta ?? null,
+    padres: padresMapeados,
+    // padre: padresMapeados[0] as any,
     activo: item.activo,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
@@ -134,9 +144,9 @@ console.log('Estudiantes después del mapeo:', data);
 
     data = data.filter(
       e =>
-        e.nombres.toLowerCase().includes(q) ||
-        e.apellidos.toLowerCase().includes(q) ||
-        e.ci.toLowerCase().includes(q)
+        (e.nombres || '').toLowerCase().includes(q) ||
+        (e.apellidos || '').toLowerCase().includes(q) ||
+        (e.ci || '').toLowerCase().includes(q)
     );
   }
 

@@ -211,7 +211,10 @@ export interface Estudiante {
   gestion?: GestionAcademica;
   padreId?: string;
   padre?: Padre;
+  padres?: any[];
   activo: boolean;
+  esPlus?: boolean; 
+  plusHasta?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -249,6 +252,7 @@ export interface Practica {
 }
 
 export interface UsuarioWeb {
+  estado: string;
   id: string;
   codigo: string;
   nombres: string;

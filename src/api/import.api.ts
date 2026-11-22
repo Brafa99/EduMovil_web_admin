@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import type { ImportResult, ImportRowError } from '../types';
-
+import { apiRequest } from './client';
+import { getCursos } from './cursos.api.ts';
 export interface ImportPreview {
   totalFilas: number;
   columnas: string[];
@@ -397,46 +398,88 @@ export async function executeImport(
   unidadEducativaId: string,
   gestionId: string,
   fileName: string,
+  onProgress?: (current: number, total: number) => void
 ): Promise<ImportResult> {
-  const validation = validateImportedRows(
-    rows,
-    mapping,
-  );
+  const validation = validateImportedRows(rows, mapping);
+  const normalizedRows = normalizeImportedRows(rows, mapping);
 
-  const normalizedRows = normalizeImportedRows(
-    rows,
-    mapping,
-  );
+  // Identificamos las filas que tenían errores para saltarlas
+  const badRowNumbers = new Set(validation.errors.map(e => e.fila));
+  const validStudents = normalizedRows.filter((_, idx) => !badRowNumbers.has(idx + 2));
 
-  const result: ImportResult = {
-    id: `demo-import-${Date.now()}`,
+  let creados = 0;
+  let erroredOnServer = 0;
+
+  // 1. OBTENEMOS LOS CURSOS REALES DE ESE COLEGIO Y GESTIÓN PARA CRUZAR DATOS
+  let cursosMap = new Map<string, string>();
+  try {
+    const cursosRes = await getCursos({ unidadEducativaId });
+    // Guardamos un mapa de "3ro Secundaria A" -> "uuid-del-curso"
+    cursosMap = new Map(cursosRes.data.map(c => [`${c.nombre} ${c.paralelo}`.toLowerCase().trim(), c.id]));
+  } catch (err) {
+    console.error("No se pudieron cargar los cursos para la importación", err);
+  }
+
+  for (let i = 0; i < validStudents.length; i++) {
+    const row = validStudents[i];
+    if (onProgress) onProgress(i + 1, validStudents.length);
+
+    // 2. SEPARADOR INTELIGENTE DEL NOMBRE DEL TUTOR (Si todo viene en una columna)
+    let tutorNombres = row.padreNombres;
+    let tutorApellidos = row.padreApellidos;
+
+    // Si hay nombres, pero no apellidos, asumimos que viene todo junto y lo partimos por la mitad
+    if (tutorNombres && !tutorApellidos) {
+      const parts = tutorNombres.trim().split(' ');
+      if (parts.length > 1) {
+        // La primera mitad son nombres, la segunda mitad son apellidos
+        const half = Math.ceil(parts.length / 2);
+        tutorNombres = parts.slice(0, half).join(' ');
+        tutorApellidos = parts.slice(half).join(' ');
+      }
+    }
+
+    // 3. BUSCAMOS EL ID DEL CURSO EN BASE AL NOMBRE DEL EXCEL
+    let cursoActualId = undefined;
+    if (row.curso) {
+      // Ejemplo: "3ro Secundaria" + "A"
+      const nombreCompletoExcel = `${row.curso} ${row.paralelo || ''}`.toLowerCase().trim();
+      cursoActualId = cursosMap.get(nombreCompletoExcel);
+    }
+
+    try {
+      // 4. EL PAYLOAD DEFINITIVO
+      await apiRequest('/estudiantes', {
+        method: 'POST',
+        body: JSON.stringify({
+          nombres: row.nombres,
+          apellidos: row.apellidos,
+          ci: row.ci,
+          fechaNacimiento: row.fechaNacimiento ? `${row.fechaNacimiento}T12:00:00.000Z` : undefined,
+          cursoActualId: cursoActualId || undefined, // Si lo encuentra, lo vincula
+          unidadEducativaId: unidadEducativaId // <-- ¡Lo devolvemos para que NestJS esté feliz!
+        })
+      });
+      creados++;
+    } catch (err) {
+      console.error(`Error importando estudiante ${row.ci}:`, err);
+      erroredOnServer++;
+    }
+  }
+
+  return {
+    id: `import-${Date.now()}`,
     fecha: new Date().toISOString(),
     archivo: fileName,
     tipo: 'estudiantes',
     totalFilas: normalizedRows.length,
-    creados: validation.validRows,
+    creados,
     actualizados: 0,
     omitidos: validation.duplicateRows,
-    errores: validation.invalidRows,
-    estado:
-      validation.invalidRows > 0 ||
-      validation.duplicateRows > 0
-        ? 'parcial'
-        : 'completado',
+    errores: validation.invalidRows + erroredOnServer,
+    estado: (validation.invalidRows + erroredOnServer) > 0 || validation.duplicateRows > 0 ? 'parcial' : 'completado',
     unidadEducativaId,
     gestionId,
-    usuarioId: 'demo-local',
+    usuarioId: 'admin',
   };
-
-  // Solo persistencia local para la demo.
-  sessionStorage.setItem(
-    'edumovil_demo_import',
-    JSON.stringify({
-      result,
-      rows: normalizedRows,
-      validation,
-    }),
-  );
-
-  return result;
 }

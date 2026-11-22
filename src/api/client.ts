@@ -43,11 +43,16 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
 
+  const usuarioId = localStorage.getItem('usuario_id') || '';
+
   const response = await fetch(url, {
     ...options,
-    headers: getHeaders(options),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Usuario-Id': usuarioId,
+      ...options.headers,
+    },
   });
-
   if (!response.ok) {
     const responseText = await response.text();
 

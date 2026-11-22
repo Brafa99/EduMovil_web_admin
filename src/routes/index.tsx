@@ -24,6 +24,8 @@ import EncuestadorImportacion from '../pages/encuestador/Importacion';
 import EncuestadorPerfil from '../pages/encuestador/Perfil';
 import CatalogoGlobal from '../pages/admin/CatalogoGlobal';
 import Subtemas from '../pages/admin/Subtemas';
+import Pagos from '../pages/admin/Pagos';
+import PatrocinadoresPage from '../pages/admin/PatrocinadoresPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -79,12 +81,15 @@ export const router = createBrowserRouter([
       { path: 'admin/reportes', element: <RequireRole role="ADMIN"><Reportes /></RequireRole> },
       { path: 'admin/usuarios', element: <RequireRole role="ADMIN"><Usuarios /></RequireRole> },
       { path: 'admin/importacion', element: <RequireRole role="ADMIN"><Importacion /></RequireRole> },
+      { path: 'admin/patrocinadores', element: <RequireRole role="ADMIN"><PatrocinadoresPage /></RequireRole> },
+      { path: 'admin/pagos', element: <RequireRole role="ADMIN"><Pagos/></RequireRole> },
       // Encuestador routes
       { path: 'encuestador', element: <RequireRole role="ENCUESTADOR"><EncuestadorDashboard /></RequireRole> },
       { path: 'encuestador/institucion', element: <RequireRole role="ENCUESTADOR"><EncuestadorInstitucion /></RequireRole> },
       { path: 'encuestador/estudiantes', element: <RequireRole role="ENCUESTADOR"><EncuestadorEstudiantes /></RequireRole> },
       { path: 'encuestador/cursos', element: <RequireRole role="ENCUESTADOR"><EncuestadorCursos /></RequireRole> },
       { path: 'encuestador/importacion', element: <RequireRole role="ENCUESTADOR"><EncuestadorImportacion /></RequireRole> },
+      { path: 'encuestador/pagos', element: <RequireRole role="ENCUESTADOR"><EncuestadorImportacion /></RequireRole> },
       { path: 'encuestador/perfil', element: <RequireRole role="ENCUESTADOR"><EncuestadorPerfil /></RequireRole> },
     ],
   },

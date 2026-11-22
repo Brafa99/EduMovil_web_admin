@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Edit2, Eye } from 'lucide-react';
+import { Edit2, Eye, Trash2 } from 'lucide-react';
 
 import { CrudPage } from '../../components/ui/CrudPage';
 import { Badge } from '../../components/ui/Badge';
 import { ActionsMenu } from '../../components/ui/ActionsMenu';
-import { Modal } from '../../components/ui/Modal';
+import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import {
   FormField,
   Input,
@@ -15,6 +15,7 @@ import {
   getPracticas,
   createPractica,
   updatePractica,
+  deletePractica
 } from '../../api/practicas.api';
 
 import { getEstudiantes } from '../../api/estudiantes.api';
@@ -67,6 +68,9 @@ export default function Practicas() {
   const [saving, setSaving] =
     useState(false);
 
+  const [searchEstudiante, setSearchEstudiante] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<Practica | null>(null);
+
   const [estudiantes, setEstudiantes] =
     useState<Estudiante[]>([]);
 
@@ -85,6 +89,22 @@ export default function Practicas() {
    * MATERIAS
    * desde mocks/data.
    */
+  
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    try {
+      await deletePractica(confirmDelete.id);
+      toast('Reto eliminado exitosamente', 'success');
+      setRefresh(r => r + 1);
+    } catch (error) {
+      console.error('Error eliminando:', error);
+      toast('Error al eliminar el reto', 'error');
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -135,155 +155,63 @@ export default function Practicas() {
     };
   }, [toast]);
 
+  const openCreate = () => {
+    setForm(EMPTY);
+    setSearchEstudiante('');
+    setModal({ open: true });
+  };
+
+  const openEdit = (practica: Practica) => {
+    setForm({
+      estudianteId: practica.estudianteId,
+      materiaId: practica.materiaId,
+      titulo: practica.titulo,
+      descripcion: practica.descripcion ?? '',
+      puntaje: practica.puntaje,
+      fecha: practica.fecha.split('T')[0],
+      estado: practica.estado,
+    });
+    setSearchEstudiante('');
+    setModal({ open: true, data: practica });
+  };
+
   const handleSave = async () => {
-    if (!form.estudianteId) {
-      toast(
-        'Selecciona un estudiante',
-        'error',
-      );
-      return;
+    if (!form.estudianteId) return toast('Selecciona un estudiante', 'error');
+    if (!form.materiaId) return toast('Selecciona una materia', 'error');
+    if (!form.titulo.trim()) return toast('Ingresa el título de la práctica', 'error');
+    if (form.puntaje !== undefined && (form.puntaje < 0 || form.puntaje > 100)) {
+      return toast('El puntaje debe estar entre 0 y 100', 'error');
     }
 
-    if (!form.materiaId) {
-      toast(
-        'Selecciona una materia',
-        'error',
-      );
-      return;
-    }
-
-    if (!form.titulo.trim()) {
-      toast(
-        'Ingresa el título de la práctica',
-        'error',
-      );
-      return;
-    }
-
-    if (
-      form.puntaje !== undefined &&
-      (form.puntaje < 0 ||
-        form.puntaje > 100)
-    ) {
-      toast(
-        'El puntaje debe estar entre 0 y 100',
-        'error',
-      );
-      return;
-    }
-
-    /*
-     * El backend de Practica actualmente maneja:
-     *
-     * titulo
-     * puntaje
-     * puntajeMax
-     * fecha
-     * estudianteId
-     * materiaId
-     * trimestre
-     *
-     * No maneja:
-     * descripcion
-     * estado
-     *
-     * Por eso no enviamos esos dos últimos
-     * al backend.
-     *
-     * Como la UI actual tampoco tiene selector
-     * de trimestre, usamos T1 por defecto.
-     */
     const payload = {
       titulo: form.titulo.trim(),
-      puntaje: form.puntaje,
+      puntaje: form.puntaje ?? 0, // Aseguramos que envíe un número
       fecha: form.fecha,
-      estudianteId:
-        form.estudianteId,
-      materiaId:
-        form.materiaId,
-      trimestre: 'T1' as const,
+      estudianteId: form.estudianteId,
+      materiaId: form.materiaId,
+      trimestre: 1 as 1 | 2 | 3, // El backend espera un número (1, 2 o 3)
     };
 
     setSaving(true);
 
     try {
       if (modal.data) {
-        await updatePractica(
-          modal.data.id,
-          payload,
-        );
-
-        toast(
-          'Práctica actualizada',
-          'success',
-        );
+        await updatePractica(modal.data.id, payload);
+        toast('Práctica actualizada', 'success');
       } else {
         await createPractica(payload);
-
-        toast(
-          'Práctica registrada',
-          'success',
-        );
+        toast('Práctica registrada', 'success');
       }
 
-      setModal({
-        open: false,
-      });
-
+      setModal({ open: false });
       setForm(EMPTY);
-
       setRefresh(value => value + 1);
     } catch (error) {
-      console.error(
-        'Error guardando práctica:',
-        error,
-      );
-
-      toast(
-        'Error al guardar la práctica',
-        'error',
-      );
+      console.error('Error guardando práctica:', error);
+      toast('Error al guardar la práctica', 'error');
     } finally {
       setSaving(false);
     }
-  };
-
-  const openCreate = () => {
-    setForm(EMPTY);
-
-    setModal({
-      open: true,
-    });
-  };
-
-  const openEdit = (
-    practica: Practica,
-  ) => {
-    setForm({
-      estudianteId:
-        practica.estudianteId,
-      materiaId:
-        practica.materiaId,
-      titulo:
-        practica.titulo,
-      descripcion:
-        practica.descripcion ?? '',
-      puntaje:
-        practica.puntaje,
-      fecha:
-        practica.fecha
-          ? practica.fecha.split('T')[0]
-          : new Date()
-              .toISOString()
-              .split('T')[0],
-      estado:
-        practica.estado,
-    });
-
-    setModal({
-      open: true,
-      data: practica,
-    });
   };
 
   const getNombreEstudiante = (
@@ -334,138 +262,63 @@ export default function Practicas() {
   return (
     <>
       <CrudPage<Practica>
-        title="Prácticas"
-        description="Registro de prácticas y trabajos"
+        title="Misiones y Retos (Prácticas)"
+        description="Asigna retos específicos para que los estudiantes ganen puntos adicionales jugando en la app."
         refreshTrigger={refresh}
-        fetchData={() =>
-          getPracticas().then(
-            response => response,
-          )
-        }
+        fetchData={() => getPracticas().then(response => response)}
         keyExtractor={row => row.id}
         onAdd={openCreate}
-        addLabel="Registrar práctica"
+        addLabel="Nuevo Reto"
         columns={[
           {
             key: 'titulo',
-            label: 'Título',
-            render: row => (
-              <span className="font-semibold text-sm text-slate-700">
-                {row.titulo}
-              </span>
-            ),
+            label: 'Misión',
+            render: row => <span className="font-semibold text-slate-700">{row.titulo}</span>,
           },
-
           {
             key: 'estudiante',
             label: 'Estudiante',
             render: row => (
-              <span>
-                {getNombreEstudiante(
-                  row,
-                )}
+              <span className="text-sm">
+                {row.estudiante ? `${row.estudiante.nombres} ${row.estudiante.apellidos}` : '—'}
               </span>
             ),
           },
-
           {
             key: 'materia',
             label: 'Materia',
+            render: row => <span className="text-sm">{row.materia?.nombre ?? '—'}</span>,
+          },
+          {
+            key: 'puntaje',
+            label: 'Recompensa (XP)',
             render: row => (
-              <span>
-                {getNombreMateria(
-                  row,
-                )}
+              <span className="font-bold text-blue-600">
+                {row.puntaje ? `+${row.puntaje} XP` : '—'}
               </span>
             ),
           },
-
-          {
-            key: 'puntaje',
-            label: 'Puntaje',
-            render: row =>
-              row.puntaje != null ? (
-                <span className="font-bold text-slate-700">
-                  {row.puntaje}
-                </span>
-              ) : (
-                <span className="text-slate-400">
-                  —
-                </span>
-              ),
-          },
-
-          {
-            key: 'fecha',
-            label: 'Fecha',
-            render: row => {
-              if (!row.fecha) {
-                return '—';
-              }
-
-              const date =
-                new Date(
-                  row.fecha,
-                );
-
-              return Number.isNaN(
-                date.getTime(),
-              )
-                ? '—'
-                : date.toLocaleDateString(
-                    'es-BO',
-                  );
-            },
-          },
-
           {
             key: 'estado',
             label: 'Estado',
-            render: row => (
-              <Badge
-                variant={
-                  ESTADO_COLORS[
-                    row.estado
-                  ]
-                }
-              >
-                {row.estado
-                  .charAt(0)
-                  .toUpperCase() +
-                  row.estado.slice(1)}
-              </Badge>
-            ),
+            render: row => {
+              // Forzamos a string para que TypeScript no arroje error de "no overlap"
+              const estado = row.estado as string;
+              return (
+                <Badge variant={estado === 'completado' ? 'blue' : estado === 'revisado' ? 'green' : 'orange'}>
+                  {estado === 'completado' ? 'Completado 🎯' : estado === 'revisado' ? 'Revisado ✅' : 'Pendiente ⏳'}
+                </Badge>
+              );
+            },
           },
-
           {
             key: 'actions',
             label: '',
             render: row => (
               <ActionsMenu
                 items={[
-                  {
-                    label:
-                      'Ver detalle',
-                    icon: (
-                      <Eye size={14} />
-                    ),
-                    onClick: () => {
-                      /*
-                       * Se conserva la acción
-                       * visualmente por ahora.
-                       * Podemos implementar el
-                       * detalle posteriormente.
-                       */
-                    },
-                  },
-                  {
-                    label: 'Editar',
-                    icon: (
-                      <Edit2 size={14} />
-                    ),
-                    onClick: () =>
-                      openEdit(row),
-                  },
+                  { label: 'Editar', icon: <Edit2 size={14} />, onClick: () => openEdit(row) },
+                  { label: 'Eliminar', icon: <Trash2 size={14} />, onClick: () => setConfirmDelete(row), variant: 'danger' },
                 ]}
               />
             ),
@@ -553,52 +406,33 @@ export default function Practicas() {
           </FormField>
 
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              label="Estudiante"
-              required
-            >
+            <FormField label="Buscar y Seleccionar Estudiante" required>
+              <Input
+                placeholder="🔍 Escribir nombre o apellido..."
+                value={searchEstudiante}
+                onChange={e => setSearchEstudiante(e.target.value)}
+                className="mb-2 text-sm"
+                disabled={saving}
+              />
               <Select
-                value={
-                  form.estudianteId
-                }
-                onChange={event =>
-                  setForm(current => ({
-                    ...current,
-                    estudianteId:
-                      event.target
-                        .value,
-                  }))
-                }
-                placeholder={
-                  loadingOptions
-                    ? 'Cargando estudiantes...'
-                    : 'Seleccionar'
-                }
-                disabled={
-                  loadingOptions ||
-                  saving
-                }
+                value={form.estudianteId}
+                onChange={event => setForm(current => ({ ...current, estudianteId: event.target.value }))}
+                disabled={loadingOptions || saving}
               >
+                <option value="" disabled>Seleccione de la lista filtrada...</option>
                 {estudiantes
-                  .filter(
-                    estudiante =>
-                      estudiante.activo,
-                  )
+                  .filter(e => e.activo)
+                  .filter(e => {
+                    if (!searchEstudiante) return true;
+                    const term = searchEstudiante.toLowerCase();
+                    return (
+                      e.nombres.toLowerCase().includes(term) ||
+                      e.apellidos.toLowerCase().includes(term)
+                    );
+                  })
                   .map(estudiante => (
-                    <option
-                      key={
-                        estudiante.id
-                      }
-                      value={
-                        estudiante.id
-                      }
-                    >
-                      {
-                        estudiante.nombres
-                      }{' '}
-                      {
-                        estudiante.apellidos
-                      }
+                    <option key={estudiante.id} value={estudiante.id}>
+                      {estudiante.nombres} {estudiante.apellidos}
                     </option>
                   ))}
               </Select>
@@ -737,6 +571,14 @@ export default function Practicas() {
           </div>
         </div>
       </Modal>
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={handleDelete}
+        title="Eliminar Reto"
+        message={`¿Estás seguro de eliminar el reto "${confirmDelete?.titulo}" asignado a este estudiante?`}
+        confirmLabel="Sí, eliminar"
+      />
     </>
   );
 }
