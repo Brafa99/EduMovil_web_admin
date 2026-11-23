@@ -87,6 +87,7 @@ export default function Subtemas() {
   const [confirmDelete, setConfirmDelete] = useState<Subtema | null>(null);
   const [confirmToggle, setConfirmToggle] = useState<Subtema | null>(null);
   const [activeTab, setActiveTab] = useState<TipoJuego>('QUIZ');
+  const [cantidadPreguntas, setCantidadPreguntas] = useState<number>(10);
 
   useEffect(() => {
     const fetchListaTemas = async () => {
@@ -228,7 +229,7 @@ export default function Subtemas() {
         body: JSON.stringify({
           subtemaId: subtema.id,
           temaId: subtema.temaId,
-          cantidad: 10,
+          cantidad: cantidadPreguntas,
           tipoJuego,
         }),
       });
@@ -278,7 +279,7 @@ export default function Subtemas() {
           body: JSON.stringify({
             subtemaId: subtema.id,
             temaId: subtema.temaId,
-            cantidad: 10,
+            cantidad: cantidadPreguntas,
             tipoJuego: tipo,
           }),
         });
@@ -407,6 +408,7 @@ export default function Subtemas() {
         description="Agrega la última capa de jerarquía aquí"
         refreshTrigger={refresh}
         fetchData={async (params?: any) => {
+
           const res = await getSubtemas(selectedTemaIdRef.current || undefined);
           const normalize = (str?: string) =>
             (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -426,6 +428,21 @@ export default function Subtemas() {
           setModal({ open: true, data: undefined });
         }}
         addLabel="Nuevo Subtema"
+        extraActions={
+          <div className="inline-flex items-center gap-1.5 bg-purple-50 border border-purple-200 px-3 py-2 rounded-lg text-xs">
+            <Sparkles size={14} className="text-purple-600 shrink-0" />
+            <span className="font-medium text-purple-900">IA por juego:</span>
+            <select
+              value={cantidadPreguntas}
+              onChange={(e) => setCantidadPreguntas(Number(e.target.value))}
+              className="bg-transparent font-bold text-purple-700 focus:outline-none cursor-pointer"
+            >
+              <option value={3}>3 ítems (Demo)</option>
+              <option value={5}>5 ítems (Normal)</option>
+              <option value={10}>10 ítems (Estándar)</option>
+            </select>
+          </div>
+        }
         columns={[
           {
             key: 'nombre',
@@ -451,7 +468,7 @@ export default function Subtemas() {
                   onClick={() => handleGenerarTodosIA(s)}
                   disabled={generatingIA === s.id}
                   className="btn-primary text-xs flex items-center gap-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
-                  title="Generar los 3 tipos de juegos (Quiz, Memorama y Completar)"
+                  title={`Generar los 3 juegos (${cantidadPreguntas} ítems c/u: Quiz, Memorama y Completar)`}
                 >
                   {generatingIA === s.id ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -477,6 +494,7 @@ export default function Subtemas() {
             key: 'actions',
             label: 'Gestión',
             render: (s) => (
+            
               <ActionsMenu
                 items={[
                   { label: 'Editar', icon: <Edit2 size={14} />, onClick: () => handleEdit(s) },
@@ -496,6 +514,7 @@ export default function Subtemas() {
               />
             ),
           },
+          
         ]}
       />
 
@@ -549,22 +568,42 @@ export default function Subtemas() {
         onClose={() => setVisorModal({ open: false, juegos: [], cargando: false })}
         title={`Banco de IA - ${visorModal.subtema?.nombre ?? ''}`}
         footer={
-          <div className="flex w-full justify-between items-center">
+          <div className="flex flex-wrap w-full justify-between items-center gap-2">
             {visorModal.subtema && (
-              <button
-                onClick={() => handleGenerarIA(visorModal.subtema!, activeTab)}
-                disabled={generatingIA === visorModal.subtema.id}
-                className="btn-primary text-xs flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
-              >
-                {generatingIA === visorModal.subtema.id ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Sparkles size={14} />
-                )}
-                {generatingIA === visorModal.subtema.id
-                  ? `Generando ${activeTab}...`
-                  : `Generar ${activeTab} con IA`}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={cantidadPreguntas}
+                  onChange={(e) => setCantidadPreguntas(Number(e.target.value))}
+                  disabled={generatingIA === visorModal.subtema.id}
+                  className="px-2.5 py-2 text-xs font-semibold border border-purple-200 rounded-lg bg-purple-50 text-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  title="Cantidad de ítems a generar con IA"
+                >
+                  <option value={3}>
+                    3 {activeTab === 'MEMORAMA' ? 'items (Demo)' : activeTab === 'COMPLETAR' ? 'frases (Demo)' : 'preguntas (Demo)'}
+                  </option>
+                  <option value={5}>
+                    5 {activeTab === 'MEMORAMA' ? 'items (Pares)' : activeTab === 'COMPLETAR' ? 'frases (Prueba)' : 'preguntas (Prueba)'}
+                  </option>
+                  <option value={10}>
+                    10 {activeTab === 'MEMORAMA' ? 'items (Estándar)' : activeTab === 'COMPLETAR' ? 'frases (Estándar)' : 'preguntas (Estándar)'}
+                  </option>
+                </select>
+
+                <button
+                  onClick={() => handleGenerarIA(visorModal.subtema!, activeTab)}
+                  disabled={generatingIA === visorModal.subtema.id}
+                  className="btn-primary text-xs flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {generatingIA === visorModal.subtema.id ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={14} />
+                  )}
+                  {generatingIA === visorModal.subtema.id
+                    ? `Generando ${activeTab}...`
+                    : `Generar ${activeTab} (${cantidadPreguntas})`}
+                </button>
+              </div>
             )}
             <button
               className="btn-secondary"
