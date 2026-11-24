@@ -26,6 +26,7 @@ import CatalogoGlobal from '../pages/admin/CatalogoGlobal';
 import Subtemas from '../pages/admin/Subtemas';
 import Pagos from '../pages/admin/Pagos';
 import PatrocinadoresPage from '../pages/admin/PatrocinadoresPage';
+import Verificaciones from '../pages/admin/Verificaciones';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -82,6 +83,7 @@ export const router = createBrowserRouter([
       { path: 'admin/usuarios', element: <RequireRole role="ADMIN"><Usuarios /></RequireRole> },
       { path: 'admin/importacion', element: <RequireRole role="ADMIN"><Importacion /></RequireRole> },
       { path: 'admin/patrocinadores', element: <RequireRole role="ADMIN"><PatrocinadoresPage /></RequireRole> },
+      { path: 'admin/verificaciones', element: <RequireRole role="ADMIN"><Verificaciones /></RequireRole> },
       { path: 'admin/pagos', element: <RequireRole role="ADMIN"><Pagos/></RequireRole> },
       // Encuestador routes
       { path: 'encuestador', element: <RequireRole role="ENCUESTADOR"><EncuestadorDashboard /></RequireRole> },

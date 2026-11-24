@@ -127,7 +127,7 @@ export interface Curso {
   id: string;
   nombre: string;
   paralelo: string;
-  nivel: string;
+  nivel?: 'INICIAL' | 'PRIMARIA' | 'SECUNDARIA';
   grado?: number | null;
   turno?: string | null;
   gestionId: string;

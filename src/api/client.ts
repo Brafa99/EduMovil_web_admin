@@ -42,16 +42,16 @@ export async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
+  const headers = getHeaders(options);
 
-  const usuarioId = localStorage.getItem('usuario_id') || '';
+  const usuarioId = localStorage.getItem('usuario_id');
+  if (usuarioId && !headers.has('X-Usuario-Id')) {
+    headers.set('X-Usuario-Id', usuarioId);
+  }
 
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Usuario-Id': usuarioId,
-      ...options.headers,
-    },
+    headers,
   });
   if (!response.ok) {
     const responseText = await response.text();

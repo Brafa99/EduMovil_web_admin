@@ -13,10 +13,12 @@ import { useToast } from '../../hooks/useToast';
 import type { Curso, GestionAcademica, Profesor, UnidadEducativa } from '../../types';
 import { apiRequest } from '../../api/client';
 
+type CicloEducativo = 'INICIAL' | 'PRIMARIA' | 'SECUNDARIA';
+
 const EMPTY = {
   nombre: '',
   paralelo: 'A',
-  nivel: 'SECUNDARIA' as 'PRIMARIA' | 'SECUNDARIA',
+  nivel: 'SECUNDARIA' as CicloEducativo,
   grado: 1,
   turno: 'mañana' as 'mañana' | 'tarde' | 'noche',
   gestionId: '',
@@ -146,8 +148,7 @@ export default function Cursos() {
 
     setSaving(true);
 
-    
-
+  
 try {
   const nombre = generarNombreCurso(
     form.nivel,
@@ -193,9 +194,10 @@ try {
   setForm({
     nombre: curso.nombre,
     paralelo: curso.paralelo || 'A',
-    nivel: curso.nivel === 'PRIMARIA'
-      ? 'PRIMARIA'
-      : 'SECUNDARIA',
+    nivel:
+      curso.nivel === 'INICIAL' || curso.nivel === 'PRIMARIA'
+        ? curso.nivel
+        : 'SECUNDARIA',
     grado: curso.grado ?? 1,
     turno:
       curso.turno === 'tarde' || curso.turno === 'noche'
@@ -236,11 +238,12 @@ try {
               </span>
             ),
           },
+          
           {
             key: 'paralelo',
             label: 'Paralelo',
             render: r => (
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-blue-50 text-blue-700 text-sm font-bold">
+              <span className="inline-flex items-center justify-center min-w-7 h-7 px-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-bold">
                 {r.paralelo}
               </span>
             ),
@@ -556,6 +559,58 @@ try {
         message={`¿Cambiar estado de "${confirmToggle?.nombre} ${confirmToggle?.paralelo}"?`}
         confirmLabel="Confirmar"
       />
+
+      <FormField label="Ciclo educativo" required>
+    <Select
+      value={form.nivel}
+      onChange={e =>
+        setForm(f => ({
+          ...f,
+          nivel: e.target.value as CicloEducativo,
+          grado: 1,
+        }))
+      }
+    >
+      <option value="INICIAL">Inicial / Kínder</option>
+      <option value="PRIMARIA">Primaria</option>
+      <option value="SECUNDARIA">Secundaria</option>
+    </Select>
+  </FormField>
+
+  <FormField label="Grado" required>
+    <Select
+      value={String(form.grado)}
+      onChange={e =>
+        setForm(f => ({
+          ...f,
+          grado: Number(e.target.value),
+        }))
+      }
+    >
+      {(form.nivel === 'INICIAL' ? [1, 2] : [1, 2, 3, 4, 5, 6]).map(grado => (
+        <option key={grado} value={grado}>
+          {form.nivel === 'INICIAL'
+            ? grado === 1
+              ? '1° de Inicial (Pre-Kínder)'
+              : '2° de Inicial (Kínder)'
+            : `${grado}° de ${form.nivel === 'PRIMARIA' ? 'Primaria' : 'Secundaria'}`}
+        </option>
+      ))}
+    </Select>
+  </FormField>
+
+  <FormField label="Paralelo (letra, color o nombre)" required>
+    <Input
+      value={form.paralelo}
+      onChange={e =>
+        setForm(f => ({
+          ...f,
+          paralelo: e.target.value,
+        }))
+      }
+      placeholder="Ej: A, B, Blanco, Café, Abejitas"
+    />
+  </FormField>
       
       {/* MODAL: CONFIRMAR ELIMINACIÓN DEFINITIVA */}
       {confirmDelete && (
@@ -586,13 +641,15 @@ try {
 }
 
 function generarNombreCurso(
-  nivel: 'PRIMARIA' | 'SECUNDARIA',
+  nivel: CicloEducativo,
   grado: number,
   paralelo: string,
 ): string {
-  const ciclo = nivel === 'PRIMARIA'
-    ? 'Primaria'
-    : 'Secundaria';
-
-  return `${grado}° de ${ciclo} ${paralelo}`;
+  const p = paralelo.trim();
+  if (nivel === 'INICIAL') {
+    const etiqueta = grado === 1 ? '1° de Inicial (Pre-Kínder)' : '2° de Inicial (Kínder)';
+    return p ? `${etiqueta} ${p}` : etiqueta;
+  }
+  const ciclo = nivel === 'PRIMARIA' ? 'Primaria' : 'Secundaria';
+  return p ? `${grado}° de ${ciclo} ${p}` : `${grado}° de ${ciclo}`;
 }

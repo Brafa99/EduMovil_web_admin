@@ -11,7 +11,7 @@ import { getProfesores } from './profesores.api';
 interface BackendCurso {
   id: string;
   nombre: string;
-  ciclo: 'PRIMARIA' | 'SECUNDARIA';
+  ciclo: 'INICIAL' | 'PRIMARIA' | 'SECUNDARIA';
   grado?: number | null;
   paralelo?: string | null;
   turno?: string | null;
@@ -270,7 +270,7 @@ export async function getCursos(
 
 export interface CreateCursoPayload {
   nombre: string;
-  nivel: 'PRIMARIA' | 'SECUNDARIA';
+  nivel?: 'INICIAL' | 'PRIMARIA' | 'SECUNDARIA';
   grado: number;
   paralelo: string;
   turno: 'mañana' | 'tarde' | 'noche';
