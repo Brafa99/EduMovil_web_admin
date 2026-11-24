@@ -26,6 +26,7 @@ const ADMIN_NAV = [
   { label: 'Cursos y Paralelos', icon: BookOpen, to: '/admin/cursos' },
   { label: 'Profesores', icon: Users, to: '/admin/profesores' },
   { label: 'Estudiantes', icon: GraduationCap, to: '/admin/estudiantes' },
+  { label: 'Admisión Estudiantes', icon: GraduationCap, to: '/admin/verificaciones' },
   { label: 'Padres y Tutores', icon: UserCheck, to: '/admin/padres' },
   { label: 'Catálogo Base (IA)', icon: Globe, to: '/admin/catalogo' },
   { label: 'Materias', icon: FileText, to: '/admin/materias' },
