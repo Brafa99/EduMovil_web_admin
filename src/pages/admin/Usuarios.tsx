@@ -212,17 +212,36 @@ export default function Usuarios() {
           },
           {
             key: 'nombre',
-            label: 'Usuario y Contacto',
+            label: 'Nombre Completo',
             render: (r: any) => {
-              const displayNombre = r.nombre || r.username || 'Usuario Nuevo';
+              const nombreCompleto =
+                r.nombre?.trim() ||
+                [r.nombres, r.apellidos].filter(Boolean).join(' ').trim() ||
+                r.username ||
+                'Sin nombre';
+
+              return (
+                <span className="font-semibold text-slate-800 text-sm">
+                  {nombreCompleto}
+                </span>
+              );
+            },
+          },
+          {
+            key: 'contacto',
+            label: 'Contacto',
+            render: (r: any) => {
               const celular = r.celular || r.telefono || '';
 
               return (
                 <div className="space-y-0.5">
-                  <p className="font-semibold text-slate-800 text-sm">{displayNombre}</p>
-                  {r.email && <p className="text-xs text-slate-600">{r.email}</p>}
+                  {r.email ? (
+                    <p className="text-xs text-slate-700">{r.email}</p>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 italic">Sin correo</p>
+                  )}
                   {celular ? (
-                    <p className="text-xs text-slate-700 font-mono">📱 {celular}</p>
+                    <p className="text-xs text-slate-600 font-mono">📱 {celular}</p>
                   ) : (
                     <p className="text-[11px] text-slate-400 italic">Sin celular registrado</p>
                   )}
@@ -326,7 +345,9 @@ export default function Usuarios() {
                       onClick: () => {
                         if (!r) return;
 
-                        const partesNombre = String(r.nombre || r.username || '')
+                        const partesNombre = String(
+                          r.nombre || [r.nombres, r.apellidos].filter(Boolean).join(' ') || r.username || ''
+                        )
                           .trim()
                           .split(/\s+/);
                         const nombresIni = partesNombre[0] || '';
