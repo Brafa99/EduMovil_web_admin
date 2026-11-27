@@ -42,9 +42,35 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function RequireRole({ role, children }: { role: 'ADMIN' | 'ENCUESTADOR'; children: React.ReactNode }) {
+function isAdminRole(rol?: string) {
+  const upper = (rol || '').toUpperCase();
+  return upper === 'ADMIN' || upper === 'SUPERADMIN';
+}
+
+function RequireRole({
+  role,
+  children,
+}: {
+  role: 'ADMIN' | 'SUPERADMIN' | 'ENCUESTADOR';
+  children: React.ReactNode;
+}) {
   const { user } = useAuth();
-  if (user?.rol !== role) return <Navigate to={user?.rol === 'ADMIN' ? '/admin' : '/encuestador'} replace />;
+  const userRol = (user?.rol || '').toUpperCase();
+
+  const tieneAcceso =
+    role === 'ADMIN' || role === 'SUPERADMIN'
+      ? isAdminRole(userRol)
+      : userRol === role;
+
+  if (!tieneAcceso) {
+    return (
+      <Navigate
+        to={isAdminRole(userRol) ? '/admin' : '/encuestador'}
+        replace
+      />
+    );
+  }
+
   return <>{children}</>;
 }
 
@@ -52,7 +78,12 @@ function RootRedirect() {
   const { user, isAuthenticated, isLoading } = useAuth();
   if (isLoading) return null;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  return <Navigate to={user?.rol === 'ADMIN' ? '/admin' : '/encuestador'} replace />;
+  return (
+    <Navigate
+      to={isAdminRole(user?.rol) ? '/admin' : '/encuestador'}
+      replace
+    />
+  );
 }
 
 export const router = createBrowserRouter([
@@ -91,7 +122,7 @@ export const router = createBrowserRouter([
       { path: 'encuestador/estudiantes', element: <RequireRole role="ENCUESTADOR"><EncuestadorEstudiantes /></RequireRole> },
       { path: 'encuestador/cursos', element: <RequireRole role="ENCUESTADOR"><EncuestadorCursos /></RequireRole> },
       { path: 'encuestador/importacion', element: <RequireRole role="ENCUESTADOR"><EncuestadorImportacion /></RequireRole> },
-      { path: 'encuestador/pagos', element: <RequireRole role="ENCUESTADOR"><EncuestadorImportacion /></RequireRole> },
+      { path: 'encuestador/pagos', element: <RequireRole role="ENCUESTADOR"><Pagos /></RequireRole> },
       { path: 'encuestador/perfil', element: <RequireRole role="ENCUESTADOR"><EncuestadorPerfil /></RequireRole> },
     ],
   },
