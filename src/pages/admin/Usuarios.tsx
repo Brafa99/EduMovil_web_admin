@@ -83,19 +83,23 @@ export default function Usuarios() {
     setSaving(true);
     try {
      
-      
       const nombreCompleto = `${form.nombres.trim()} ${form.apellidos.trim()}`.trim();
       const usernameLimpio = (
         form.codigo.trim() || form.email.split('@')[0].substring(0, 30)
       ).toLowerCase();
 
+      const rolBackend =
+        form.rol === 'ADMIN'
+          ? 'ADMIN_SISTEMA'
+          : form.rol === 'SUPERADMIN'
+            ? 'SUPER_ADMIN'
+            : form.rol;
+
       const payload: Record<string, any> = {
         username: usernameLimpio,
         nombre: nombreCompleto,
-        nombres: form.nombres.trim(),
-        apellidos: form.apellidos.trim(),
         email: form.email.trim().toLowerCase(),
-        rol: form.rol,
+        rol: rolBackend,
         estado: form.activo ? 'ACTIVO' : 'INACTIVO',
         ...(form.unidadEducativaId ? { unidadEducativaId: form.unidadEducativaId } : {}),
         ...(!modal.data && form.password.trim() ? { password: form.password.trim() } : {}),
@@ -168,8 +172,7 @@ export default function Usuarios() {
             render: r => (
               <div>
                 <p className="font-semibold text-slate-700 text-sm">
-                  {/* Mostramos el username que requiere NestJS */}
-                  {(r as any).username || 'Usuario Nuevo'}
+                  {(r as any).nombre || (r as any).username || 'Usuario Nuevo'}
                 </p>
                 <p className="text-xs text-slate-400">{r.email}</p>
               </div>
