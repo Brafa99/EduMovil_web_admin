@@ -84,16 +84,21 @@ export default function Usuarios() {
     try {
      
       
-      const usernameGenerado = form.email.split('@')[0].substring(0, 30); // Ej: juanpe
+      const nombreCompleto = `${form.nombres.trim()} ${form.apellidos.trim()}`.trim();
+      const usernameLimpio = (
+        form.codigo.trim() || form.email.split('@')[0].substring(0, 30)
+      ).toLowerCase();
 
-      // PAYLOAD LIMPIO Y ASTUTO
-      const payload = {
-        // Le mandamos el código que generaste visualmente directo al 'username'
-        username: form.codigo || form.email.split('@')[0].substring(0, 30),
-        email: form.email,
+      const payload: Record<string, any> = {
+        username: usernameLimpio,
+        nombre: nombreCompleto,
+        nombres: form.nombres.trim(),
+        apellidos: form.apellidos.trim(),
+        email: form.email.trim().toLowerCase(),
         rol: form.rol,
         estado: form.activo ? 'ACTIVO' : 'INACTIVO',
-        ...(form.unidadEducativaId && { unidadEducativaId: form.unidadEducativaId })
+        ...(form.unidadEducativaId ? { unidadEducativaId: form.unidadEducativaId } : {}),
+        ...(!modal.data && form.password.trim() ? { password: form.password.trim() } : {}),
       };
 
 
@@ -285,10 +290,20 @@ export default function Usuarios() {
 
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Rol Logístico" required>
-              <Select value={form.rol || ''} onChange={e => setForm(f => ({ ...f, rol: e.target.value as UsuarioWeb['rol'], codigo: e.target.value === 'ADMIN' ? 'ADM-' : form.codigo || '' }))}>
-                <option value="ADMIN">ADMINISTRADOR (Fijo)</option>
-                <option value="ENCUESTADOR">PROMOTOR DE VENTAS (Comisionista)</option>
-              </Select>
+              <Select
+  value={form.rol || ''}
+  onChange={e =>
+    setForm(f => ({
+      ...f,
+      rol: e.target.value as UsuarioWeb['rol'],
+      codigo: e.target.value === 'ADMIN' ? 'ADM-' : f.codigo || '',
+    }))
+  }
+>
+  <option value="ENCUESTADOR">ENCUESTADOR / PROMOTOR</option>
+  <option value="ADMIN">ADMINISTRADOR</option>
+  <option value="SUPERADMIN">SUPER ADMIN</option>
+</Select>
             </FormField>
 
             <FormField label={form.rol === 'ENCUESTADOR' ? "Código Referral (Para Comisiones)" : "Código Admin"} required>

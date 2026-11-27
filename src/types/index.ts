@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'ENCUESTADOR';
+export type UserRole = 'SUPERADMIN' | 'ADMIN' | 'ENCUESTADOR';
 
 export type ActiveStatus = 'activo' | 'inactivo';
 
