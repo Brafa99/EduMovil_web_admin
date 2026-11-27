@@ -130,10 +130,27 @@ export default function Usuarios() {
         refreshTrigger={refresh}
 
         // 3. FETCH PROTEGIDO PARA LA TABLA
-        fetchData={({ search }) => getUsuarios({ search }).then((res: any) => ({
-          data: Array.isArray(res) ? res : (res.data || []),
-          total: Array.isArray(res) ? res.length : (res.total || 0)
-        }))}
+        fetchData={({ search }) =>
+  getUsuarios({ search }).then((res: any) => {
+    const lista = Array.isArray(res) ? res : (res.data || []);
+    const q = (search || '').trim().toLowerCase();
+    const filtrada = !q
+      ? lista
+      : lista.filter((u: any) => {
+          const rolNombre = (u.roles?.[0]?.rol?.nombre || u.rol || '').toLowerCase();
+          return (
+            (u.nombre || '').toLowerCase().includes(q) ||
+            (u.username || '').toLowerCase().includes(q) ||
+            (u.email || '').toLowerCase().includes(q) ||
+            rolNombre.includes(q)
+          );
+        });
+    return {
+      data: filtrada,
+      total: filtrada.length,
+    };
+  })
+}
 
         keyExtractor={r => r.id}
         onAdd={() => {
@@ -169,14 +186,23 @@ export default function Usuarios() {
           {
             key: 'nombre',
             label: 'Usuario y Contacto',
-            render: r => (
-              <div>
-                <p className="font-semibold text-slate-700 text-sm">
-                  {(r as any).nombre || (r as any).username || 'Usuario Nuevo'}
-                </p>
-                <p className="text-xs text-slate-400">{r.email}</p>
-              </div>
-            )
+            render: (r: any) => {
+              const displayNombre = r.nombre || r.username || 'Usuario Nuevo';
+              const tagCodigo = r.username ? `@${r.username}` : '';
+              return (
+                <div>
+                  <p className="font-semibold text-slate-800 text-sm">
+                    {displayNombre}
+                  </p>
+                  <p className="text-xs text-slate-500">{r.email}</p>
+                  {tagCodigo && (
+                    <p className="text-[11px] font-mono text-slate-400 mt-0.5">
+                      {tagCodigo}
+                    </p>
+                  )}
+                </div>
+              );
+            }
           },
           {
             key: 'rol',
@@ -237,25 +263,39 @@ export default function Usuarios() {
                   icon: <DollarSign size={14} />,
                   onClick: () => toast('Módulo de comisiones en construcción', 'info')
                 },
-                {
-                  label: 'Editar',
-                  icon: <Edit2 size={14} />,
-                  onClick: () => {
-                    setForm({
-                      codigo: r.codigo || '',
-                      nombres: r.nombres,
-                      apellidos: r.apellidos,
-                      email: r.email,
-                      rol: r.rol,
-                      activo: r.activo,
-                      unidadEducativaId: r.unidadEducativaId ?? '',
-                      password: ''
-                    });
-                    setTipoAsignacion(r.unidadEducativaId ? 'ESPECIFICO' : 'LIBRE');
-                    setSearchInstitucion('');
-                    setModal({ open: true, data: r });
-                  }
-                },
+               {
+  label: 'Editar',
+  icon: <Edit2 size={14} />,
+  onClick: () => {
+    const row = r as any;
+    if (!row) return;
+
+    const partesNombre = String(row.nombre || row.username || '').trim().split(/\s+/);
+    const nombresIni = partesNombre[0] || '';
+    const apellidosIni = partesNombre.slice(1).join(' ');
+    const rolActual = row.roles?.[0]?.rol?.nombre || row.rol || 'ENCUESTADOR';
+    const rolForm =
+      rolActual === 'SUPER_ADMIN'
+        ? 'SUPERADMIN'
+        : rolActual === 'ADMIN_SISTEMA'
+          ? 'ADMIN'
+          : rolActual;
+
+    setForm({
+      codigo: String(row.username || row.codigo || ''),
+      nombres: nombresIni,
+      apellidos: apellidosIni,
+      email: String(row.email || ''),
+      rol: rolForm as UsuarioWeb['rol'],
+      activo: row.estado ? row.estado === 'ACTIVO' : Boolean(row.activo),
+      unidadEducativaId: row.unidadEducativaId ?? '',
+      password: '',
+    });
+    setTipoAsignacion(row.unidadEducativaId ? 'ESPECIFICO' : 'LIBRE');
+    setSearchInstitucion('');
+    setModal({ open: true, data: row });
+  },
+}
                 {
                   label: 'Reset Password',
                   icon: <KeyRound size={14} />,
