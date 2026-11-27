@@ -14,6 +14,7 @@ import {
 import { getInstituciones } from '../../api/instituciones.api';
 import { useToast } from '../../hooks/useToast';
 import type { UsuarioWeb } from '../../types';
+import { useNavigate } from 'react-router-dom';
 
 const EMPTY = {
   codigo: '',
@@ -44,6 +45,7 @@ export default function Usuarios() {
   const [instituciones, setInstituciones] = useState<any[]>([]);
   const [tipoAsignacion, setTipoAsignacion] = useState<'LIBRE' | 'ESPECIFICO'>('LIBRE');
   const [searchInstitucion, setSearchInstitucion] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
@@ -325,81 +327,89 @@ export default function Usuarios() {
               );
             },
           },
-          {
+         {
             key: 'actions',
             label: '',
             render: (r: any) => {
               const estaActivo = r.estado ? r.estado === 'ACTIVO' : Boolean(r.activo);
+              const nombreRol = getRolReal(r);
+              const esSuperAdmin = nombreRol === 'SUPER_ADMIN' || nombreRol === 'SUPERADMIN';
 
-              return (
-                <ActionsMenu
-                  items={[
-                    {
-                      label: 'Ver Comisiones',
-                      icon: <DollarSign size={14} />,
-                      onClick: () => toast('Módulo de comisiones en construcción', 'info'),
-                    },
-                    {
-                      label: 'Editar',
-                      icon: <Edit2 size={14} />,
-                      onClick: () => {
-                        if (!r) return;
+              const itemsAcciones: any[] = [];
 
-                        const partesNombre = String(
-                          r.nombre || [r.nombres, r.apellidos].filter(Boolean).join(' ') || r.username || ''
-                        )
-                          .trim()
-                          .split(/\s+/);
-                        const nombresIni = partesNombre[0] || '';
-                        const apellidosIni = partesNombre.slice(1).join(' ');
+              if (!esSuperAdmin) {
+                itemsAcciones.push({
+                  label: 'Ver Comisiones',
+                  icon: <DollarSign size={14} />,
+                  onClick: () => {
+  const uid = encodeURIComponent(String(r.id));
+  window.location.href = `/admin/pagos?tab=reclutadores&usuarioId=${uid}&reclutadorId=${uid}`;
+},
+                });
+              }
 
-                        const rolActual = getRolReal(r) || 'ENCUESTADOR';
-                        const rolForm =
-                          rolActual === 'SUPER_ADMIN' || rolActual === 'SUPERADMIN'
-                            ? 'SUPERADMIN'
-                            : rolActual === 'ADMIN_SISTEMA' || rolActual === 'ADMIN'
-                              ? 'ADMIN'
-                              : rolActual;
+              itemsAcciones.push(
+                {
+                  label: 'Editar',
+                  icon: <Edit2 size={14} />,
+                  onClick: () => {
+                    if (!r) return;
 
-                        setForm({
-                          codigo: String(r.username || r.codigo || ''),
-                          nombres: nombresIni,
-                          apellidos: apellidosIni,
-                          email: String(r.email || ''),
-                          celular: String(r.celular || r.telefono || ''),
-                          rol: rolForm as UsuarioWeb['rol'],
-                          activo: estaActivo,
-                          unidadEducativaId: r.unidadEducativaId ?? '',
-                          password: '',
-                        });
-                        setTipoAsignacion(r.unidadEducativaId ? 'ESPECIFICO' : 'LIBRE');
-                        setSearchInstitucion('');
-                        setModal({ open: true, data: r });
-                      },
-                    },
-                    {
-                      label: 'Reset Password',
-                      icon: <KeyRound size={14} />,
-                      onClick: () => {
-                        setResetTarget(r);
-                        setNewPassword('');
-                      },
-                    },
-                    {
-                      label: estaActivo ? 'Despedir / Bloquear' : 'Recontratar / Activar',
-                      icon: estaActivo ? <PowerOff size={14} /> : <Power size={14} />,
-                      onClick: () => setConfirmToggle(r),
-                      variant: estaActivo ? 'danger' : 'default',
-                    },
-                    {
-                      label: 'Eliminar',
-                      icon: <Trash2 size={14} />,
-                      onClick: () => setConfirmDelete(r),
-                      variant: 'danger',
-                    },
-                  ]}
-                />
+                    const partesNombre = String(
+                      r.nombre || [r.nombres, r.apellidos].filter(Boolean).join(' ') || r.username || ''
+                    )
+                      .trim()
+                      .split(/\s+/);
+                    const nombresIni = partesNombre[0] || '';
+                    const apellidosIni = partesNombre.slice(1).join(' ');
+
+                    const rolActual = getRolReal(r) || 'ENCUESTADOR';
+                    const rolForm =
+                      rolActual === 'SUPER_ADMIN' || rolActual === 'SUPERADMIN'
+                        ? 'SUPERADMIN'
+                        : rolActual === 'ADMIN_SISTEMA' || rolActual === 'ADMIN'
+                          ? 'ADMIN'
+                          : rolActual;
+
+                    setForm({
+                      codigo: String(r.username || r.codigo || ''),
+                      nombres: nombresIni,
+                      apellidos: apellidosIni,
+                      email: String(r.email || ''),
+                      celular: String(r.celular || r.telefono || ''),
+                      rol: rolForm as UsuarioWeb['rol'],
+                      activo: estaActivo,
+                      unidadEducativaId: r.unidadEducativaId ?? '',
+                      password: '',
+                    });
+                    setTipoAsignacion(r.unidadEducativaId ? 'ESPECIFICO' : 'LIBRE');
+                    setSearchInstitucion('');
+                    setModal({ open: true, data: r });
+                  },
+                },
+                {
+                  label: 'Reset Password',
+                  icon: <KeyRound size={14} />,
+                  onClick: () => {
+                    setResetTarget(r);
+                    setNewPassword('');
+                  },
+                },
+                {
+                  label: estaActivo ? 'Despedir / Bloquear' : 'Recontratar / Activar',
+                  icon: estaActivo ? <PowerOff size={14} /> : <Power size={14} />,
+                  onClick: () => setConfirmToggle(r),
+                  variant: estaActivo ? 'danger' : 'default',
+                },
+                {
+                  label: 'Eliminar',
+                  icon: <Trash2 size={14} />,
+                  onClick: () => setConfirmDelete(r),
+                  variant: 'danger',
+                }
               );
+
+              return <ActionsMenu items={itemsAcciones} />;
             },
           },
         ]}
