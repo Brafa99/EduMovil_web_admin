@@ -180,12 +180,13 @@ export default function Usuarios() {
           })
         }
         keyExtractor={(r) => r.id}
-        onAdd={() => {
-          setForm(EMPTY);
-          setTipoAsignacion('LIBRE');
-          setSearchInstitucion('');
-          setModal({ open: true });
-        }}
+       onAdd={() => {
+  setForm({ ...EMPTY, celular: '', password: '' });
+  setNewPassword('');
+  setTipoAsignacion('LIBRE');
+  setSearchInstitucion('');
+  setModal({ open: true });
+}}
         addLabel="Registrar Personal"
         columns={[
           {
@@ -494,22 +495,26 @@ export default function Usuarios() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <FormField label="Email" required>
-              <Input
-                type="email"
-                value={form.email || ''}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              />
-            </FormField>
-            <FormField label="Celular / WhatsApp">
-              <Input
-                type="tel"
-                value={form.celular || ''}
-                onChange={(e) => setForm((f) => ({ ...f, celular: e.target.value }))}
-                placeholder="Ej: 71234567"
-              />
-            </FormField>
-          </div>
+  <FormField label="Email" required>
+    <Input
+      type="email"
+      name="email_usuario"
+      autoComplete="off"
+      value={form.email || ''}
+      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+    />
+  </FormField>
+  <FormField label="Celular / WhatsApp">
+    <Input
+      type="tel"
+      name="celular_usuario"
+      autoComplete="off"
+      value={form.celular || ''}
+      onChange={(e) => setForm((f) => ({ ...f, celular: e.target.value }))}
+      placeholder="Ej: 71234567"
+    />
+  </FormField>
+</div>
 
           {form.rol === 'ENCUESTADOR' && (
             <div className="space-y-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
@@ -573,15 +578,17 @@ export default function Usuarios() {
           )}
 
           {!modal.data && (
-            <FormField label="Contraseña inicial" required>
-              <Input
-                type="password"
-                value={form.password || ''}
-                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                placeholder="Mínimo 8 caracteres"
-              />
-            </FormField>
-          )}
+  <FormField label="Contraseña inicial" required>
+    <Input
+      type="password"
+      name="password_nuevo_usuario"
+      autoComplete="new-password"
+      value={form.password || ''}
+      onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+      placeholder="Mínimo 8 caracteres"
+    />
+  </FormField>
+)}
         </div>
       </Modal>
 
