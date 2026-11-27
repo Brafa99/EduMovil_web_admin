@@ -54,7 +54,9 @@ const ENCUESTADOR_NAV = [
 
 export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: SidebarProps) {
   const { user } = useAuth();
-  const navItems = user?.rol === 'ADMIN' ? ADMIN_NAV : ENCUESTADOR_NAV;
+  const isSuperAdmin = user?.rol === 'SUPERADMIN';
+  const isAdmin = user?.rol === 'ADMIN' || isSuperAdmin;
+  const navItems = isAdmin ? ADMIN_NAV : ENCUESTADOR_NAV;
 
   return (
     <aside
@@ -98,16 +100,21 @@ export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse
       </div>
 
       {/* Role badge */}
+
       {!isCollapsed && (
         <div className="px-4 py-2.5 shrink-0">
           <span
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-            style={user?.rol === 'ADMIN'
-              ? { background: 'rgba(27,111,255,0.2)', color: '#4D8FFF' }
-              : { background: 'rgba(0,200,255,0.15)', color: '#00C8FF' }}
+            style={
+              isSuperAdmin
+                ? { background: 'rgba(168,85,247,0.2)', color: '#C084FC' }
+                : isAdmin
+                  ? { background: 'rgba(27,111,255,0.2)', color: '#4D8FFF' }
+                  : { background: 'rgba(0,200,255,0.15)', color: '#00C8FF' }
+            }
           >
             <span className="w-1.5 h-1.5 rounded-full bg-current" />
-            {user?.rol === 'ADMIN' ? 'Administrador' : 'Encuestador'}
+            {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Administrador' : 'Encuestador'}
           </span>
         </div>
       )}

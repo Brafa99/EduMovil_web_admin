@@ -20,8 +20,15 @@ export default function Login() {
     setLoading(true);
     try {
       await login(form.codigo.trim(), form.password);
-      navigate('/');
-    } catch (err: unknown) {
+      const storedUser = localStorage.getItem('edumovil_user');
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      const destino =
+        parsedUser?.rol === 'ADMIN' || parsedUser?.rol === 'SUPERADMIN'
+          ? '/admin'
+          : '/encuestador';
+      navigate(destino, { replace: true });
+    }
+    catch (err: unknown) {
       const apiErr = err as { message?: string };
       setError(apiErr?.message ?? 'Error al iniciar sesión. Intente nuevamente.');
     } finally {
@@ -127,13 +134,13 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-semibold mb-1.5" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                Código de usuario
+                Correo o código de usuario
               </label>
               <input
                 type="text"
                 value={form.codigo}
                 onChange={e => setForm(f => ({ ...f, codigo: e.target.value }))}
-                placeholder="Ej. ADM-001"
+                placeholder="correo@edumovil.com o superdev"
                 autoComplete="username"
                 className="form-input"
                 style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'white' }}

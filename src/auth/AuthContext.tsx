@@ -39,45 +39,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (codigo: string, password: string) => {
     const response = await apiLogin({ codigo, password });
 
-    // Buscamos el UUID real en la BD de Supabase según el username/codigo
-    let realUserId = response.user.id;
-    try {
-      const res = await apiRequest<any>('/usuarios', { method: 'GET' });
-      const lista = Array.isArray(res) ? res : (res?.data ?? []);
-      const encontrado = lista.find(
-        (u: any) =>
-          u.username?.toLowerCase() === codigo.toLowerCase() ||
-          u.email?.toLowerCase() === codigo.toLowerCase()
-      );
-      if (encontrado?.id) {
-        realUserId = encontrado.id;
-      }
-    } catch (e) {
-      console.warn('No se pudo sincronizar el UUID real desde /usuarios', e);
-    }
-
-    const userActualizado = { ...response.user, id: realUserId };
-
     localStorage.setItem('edumovil_token', response.accessToken);
-    localStorage.setItem('edumovil_user', JSON.stringify(userActualizado));
-    localStorage.setItem('usuarioId', realUserId); // 👈 Misma llave que usa Subtemas.tsx
+    localStorage.setItem('edumovil_user', JSON.stringify(response.user));
+    localStorage.setItem('usuarioId', response.user.id);
 
     setToken(response.accessToken);
-    setUser(userActualizado);
+    setUser(response.user);
   };
 
   const logout = async () => {
-    await apiLogout().catch(() => { });
+    await apiLogout().catch(() => {});
     localStorage.removeItem('edumovil_token');
     localStorage.removeItem('edumovil_user');
-
     localStorage.removeItem('usuarioId');
+    localStorage.removeItem('usuario_id');
 
     setToken(null);
     setUser(null);
   };
 
-  const hasRole = (role: UserRole) => user?.rol === role;
+  const hasRole = (role: UserRole) => {
+    if (!user?.rol) return false;
+    if (user.rol === 'SUPERADMIN' && (role === 'SUPERADMIN' || role === 'ADMIN')) {
+      return true;
+    }
+    return user.rol === role;
+  };
 
   return (
     <AuthContext.Provider value={{
