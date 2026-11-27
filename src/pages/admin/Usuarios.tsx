@@ -296,7 +296,7 @@ export default function Usuarios() {
     setForm(f => ({
       ...f,
       rol: e.target.value as UsuarioWeb['rol'],
-      codigo: e.target.value === 'ADMIN' ? 'ADM-' : f.codigo || '',
+      codigo: e.target.value === 'ADMIN' ? '' : f.codigo || '',
     }))
   }
 >
