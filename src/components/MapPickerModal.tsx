@@ -77,10 +77,9 @@ export function MapPickerModal({
     }
   };
 
-  // NUEVA FUNCIÓN: Obtener ubicación GPS del navegador
   const centrarEnMiUbicacion = () => {
     if (!navigator.geolocation) {
-      alert("Tu navegador no soporta geolocalización.");
+      alert('Tu navegador no soporta geolocalización.');
       return;
     }
 
@@ -95,11 +94,16 @@ export function MapPickerModal({
         setObteniendoUbicacion(false);
       },
       (error) => {
-        console.error("Error de GPS:", error);
-        alert("No se pudo obtener tu ubicación. Verifica los permisos de tu navegador.");
+        console.error('Error de GPS:', error.code, error.message);
+        const mensajes: Record<number, string> = {
+          1: 'Permiso denegado. Habilita la ubicación en el candado de la barra de direcciones.',
+          2: 'Ubicación no disponible. Verifica que los servicios de ubicación de Windows/Mac estén activos.',
+          3: 'Tiempo de espera agotado al buscar ubicación. Puedes mover el pin manualmente en el mapa.',
+        };
+        alert(mensajes[error.code] ?? 'No se pudo obtener tu ubicación.');
         setObteniendoUbicacion(false);
       },
-      { enableHighAccuracy: true } // Fuerza a usar el GPS más preciso disponible
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
     );
   };
 
