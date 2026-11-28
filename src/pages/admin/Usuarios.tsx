@@ -344,7 +344,7 @@ export default function Usuarios() {
                   icon: <DollarSign size={14} />,
                   onClick: () => {
   const uid = encodeURIComponent(String(r.id));
-  window.location.href = `/admin/pagos?tab=reclutadores&usuarioId=${uid}&reclutadorId=${uid}`;
+  window.location.assign(`/admin/pagos?tab=reclutadores&usuarioId=${uid}&reclutadorId=${uid}`);
 },
                 });
               }
