@@ -14,7 +14,6 @@ import {
 import { getInstituciones } from '../../api/instituciones.api';
 import { useToast } from '../../hooks/useToast';
 import type { UsuarioWeb } from '../../types';
-import { useNavigate } from 'react-router-dom';
 
 const EMPTY = {
   codigo: '',
@@ -45,7 +44,6 @@ export default function Usuarios() {
   const [instituciones, setInstituciones] = useState<any[]>([]);
   const [tipoAsignacion, setTipoAsignacion] = useState<'LIBRE' | 'ESPECIFICO'>('LIBRE');
   const [searchInstitucion, setSearchInstitucion] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
